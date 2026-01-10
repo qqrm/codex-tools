@@ -30,9 +30,14 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Read Rust toolchain
+        id: rust-toolchain
+        run: echo "channel=$(awk -F '\"' '/^channel/ {print $2}' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ steps.rust-toolchain.outputs.channel }}
           components: clippy rustfmt
 
       - name: Cache cargo registry
