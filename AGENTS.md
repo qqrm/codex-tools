@@ -44,6 +44,7 @@ These guidelines apply to every persona in this repository.
 
 ## Development Workflow
 - Treat user requests as complete tasks and deliver production-ready branches that maintainers can promote without extra fixes.
+- In local environments, isolate each task in a dedicated `git worktree`. Create a new worktree per task, do not share one worktree across concurrent tasks, and avoid direct task work on the primary checkout.
 - Run every required check before committing. Default to the full test suite for the components you touched and document any skipped command with justification.
 - Surface any blockers preventing a clean branch handoff (failed checks, diverged history, etc.) together with remediation steps.
 - Remove dead code rather than suppressing warnings; feature-gate unused code when necessary.
@@ -73,7 +74,6 @@ These guidelines apply to every persona in this repository.
 
 ## GitHub and CI Practices
 - Treat GitHub workflows as first-class code: keep them under version control, review every change, and follow `.github/AGENTS.md` for directory-specific rules.
-- Every repository maintained through Codex must carry the `Codex Branch Cleanup` workflow at `.github/workflows/codex-cleanup.yml`. Keep the workflow name unchanged, preserve the schedule/dispatch triggers, and align its implementation with the canonical version in this repository. The container bootstrap (`./scripts/BaseInitialization.sh`) automatically installs the workflow from our GitHub Pages mirror when it is missing.
 - Pipeline secrets reside in the `prod` environment.
 - Use the GitHub interface to inspect logs from the five most recent pipeline runs.
 - Prefer the [`dtolnay/rust-toolchain`](https://github.com/dtolnay/rust-toolchain) pipelines for Rust projects—they are our required standard.
