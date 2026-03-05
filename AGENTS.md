@@ -44,7 +44,7 @@ These guidelines apply to every persona in this repository.
 
 ## Development Workflow
 - Treat user requests as complete tasks and deliver production-ready branches that maintainers can promote without extra fixes.
-- In local environments, isolate each task in a dedicated `git worktree`. Create a new worktree per task, do not share one worktree across concurrent tasks, and avoid direct task work on the primary checkout.
+- In local environments, isolate each task in a dedicated `git worktree`. Name each worktree and branch with a task-specific slug, create a new worktree per task, do not share one worktree across concurrent tasks, and avoid direct task work on the primary checkout.
 - Run every required check before committing. Default to the full test suite for the components you touched and document any skipped command with justification.
 - Surface any blockers preventing a clean branch handoff (failed checks, diverged history, etc.) together with remediation steps.
 - Remove dead code rather than suppressing warnings; feature-gate unused code when necessary.
