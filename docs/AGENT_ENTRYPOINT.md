@@ -11,15 +11,19 @@ Load context in this order:
 2. repository-local `CURRENT_STATE.md`
 3. repository-local `DONE_CRITERIA.md`
 4. this repository root `AGENTS.md`
-5. one matching persona from `personas/`
-6. only the scenarios needed for the current task
+5. `docs/HOWTO.md`
+6. one matching persona from `personas/`
+7. one or more matching skills from `skills/`
+8. only the scenarios needed for the current task
 
 ## How To Use This Repository
 
 - Treat the root `AGENTS.md` as the global baseline.
 - Use the root manifest at `/` or `index.json` as the machine-readable inventory for published files.
-- Load `skills.json` when you need a compact list of reusable guides and scenario playbooks.
+- Load `docs/HOWTO.md` before selecting task assets from the shared bundle.
+- Load `skills.json` when you need a compact list of reusable methods and links to the matching scenario playbooks.
 - Select one persona that matches the dominant task mode.
+- Select one or more skills only when a reusable method clearly matches the task.
 - Load only the scenarios that directly help with the current work.
 - Prefer repository-local instructions over these shared defaults when they conflict.
 - Treat task-specific instructions as stronger than generic scenario guidance.
@@ -36,10 +40,12 @@ Do not fetch remote baseline files repeatedly during one task if the same conten
 
 ## Environment Bootstrap
 
-Use the provided bootstrap scripts when appropriate:
+Use the published bootstrap scripts only for Codex Web or other ephemeral remote environments that require static setup entrypoints:
 - `scripts/BaseInitialization.sh` for base environment setup
 - `scripts/FullInitialization.sh` for full environment preparation
 - `scripts/PretaskInitialization.sh` for lightweight task refresh
+
+For local agents, do not default to these scripts. Prefer repository-local setup instructions or install the missing tools directly when needed.
 
 If a required tool is missing:
 - first check whether one of the provided scripts or repository docs already covers it;

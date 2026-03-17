@@ -33,6 +33,8 @@ required_paths=(
   ENTRYPOINT.md
   personas/catalog.json
   personas.json
+  skills/catalog.json
+  skills/index.json
   scenarios/catalog.json
   scenarios/index.json
   scenarios.json
@@ -52,6 +54,10 @@ done
 
 for persona_path in "${REPO_ROOT}"/personas/*.md; do
   required_paths+=("personas/$(basename "${persona_path}")")
+done
+
+for skill_path in "${REPO_ROOT}"/skills/*.md; do
+  required_paths+=("skills/$(basename "${skill_path}")")
 done
 
 for scenario_path in "${REPO_ROOT}"/scenarios/*.md; do

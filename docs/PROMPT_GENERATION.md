@@ -2,7 +2,7 @@
 
 This document defines how to generate context-efficient prompts for an execution agent.
 
-Use the root manifest at `/` or `index.json` to discover this document when the repository is consumed over GitHub Pages. `entrypoint.json` remains a published alias for the same manifest.
+Use the root manifest at `/` or `index.json` to discover this document when the repository is consumed over GitHub Pages. `entrypoint.json` remains a published alias for the same manifest. In that remote flow, the planner should usually inspect `AGENTS.md`, `docs/HOWTO.md`, one persona, and only the smallest matching set of skills or scenarios before writing the execution prompt.
 
 ## Purpose
 
@@ -30,6 +30,7 @@ Do not restate the whole repository. Provide only the information required to co
 4. **Pointers**
    - likely files, modules, commands, or entrypoints;
    - enough to reduce search cost without pretending to know every detail.
+   - if the work depends on shared prompt assets, specify the exact persona, skill, and scenario files to load instead of saying "use Codex Tools generally".
 5. **Validation**
    - the checks that must be run.
 6. **Output Contract**
@@ -107,3 +108,7 @@ Do not generate an execution prompt yet if:
 - the main problem is semantic ambiguity rather than implementation.
 
 In that case, first generate a discovery or clarification packet.
+
+## Bootstrap Script Note
+
+`BaseInitialization.sh`, `FullInitialization.sh`, and `PretaskInitialization.sh` are for Codex Web or other ephemeral remote environments that need static bootstrap entrypoints. Do not include them in a local-agent execution prompt unless the task explicitly targets remote bootstrap behavior.

@@ -165,6 +165,10 @@ done
 # Pages configuration
 copy_file "${REPO_ROOT}/static.json" "${OUTPUT_DIR}/static.json"
 
+# Skills
+mkdir -p "${OUTPUT_DIR}/skills"
+cp -a "${REPO_ROOT}/skills/." "${OUTPUT_DIR}/skills/"
+
 # Published shell scripts
 mkdir -p "${OUTPUT_DIR}/scripts"
 scripts_paths=()
@@ -187,6 +191,11 @@ for persona_path in "${REPO_ROOT}"/personas/*.md; do
   persona_paths+=("/personas/$(basename "${persona_path}")")
 done
 
+skills_paths=()
+for skill_path in "${REPO_ROOT}"/skills/*.md; do
+  skills_paths+=("/skills/$(basename "${skill_path}")")
+done
+
 scenario_paths=()
 for scenario_path in "${REPO_ROOT}"/scenarios/*.md; do
   scenario_paths+=("/scenarios/$(basename "${scenario_path}")")
@@ -194,6 +203,8 @@ done
 
 # Catalog copies
 copy_file "${OUTPUT_DIR}/personas/catalog.json" "${OUTPUT_DIR}/personas.json"
+copy_file "${OUTPUT_DIR}/skills/catalog.json" "${OUTPUT_DIR}/skills/index.json"
+copy_file "${OUTPUT_DIR}/skills/catalog.json" "${OUTPUT_DIR}/skills.json"
 copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios/index.json"
 copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
 
@@ -228,28 +239,6 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   printf '}\n'
 } > "${OUTPUT_DIR}/workflows/index.json"
 
-{
-  printf '{\n'
-  printf '  "version": 1,\n'
-  printf '  "base_uri": "/AGENTS.md",\n'
-  printf '  "description": "Reusable prompt assets, guides, and playbooks exposed by this bundle.",\n'
-  printf '  "catalogs": {\n'
-  printf '    "docs": "/docs/index.json",\n'
-  printf '    "scenarios": "/scenarios.json",\n'
-  printf '    "personas": "/personas.json"\n'
-  printf '  },\n'
-  printf '  "baseline_guides": '
-  emit_path_object_array '      ' '    ' 'baseline' "${root_markdown_paths[@]}"
-  printf ',\n'
-  printf '  "shared_guides": '
-  emit_path_object_array '      ' '    ' 'guide' "${docs_paths[@]}"
-  printf ',\n'
-  printf '  "scenario_playbooks": '
-  emit_path_object_array '      ' '    ' 'scenario' "${scenario_paths[@]}"
-  printf '\n'
-  printf '}\n'
-} > "${OUTPUT_DIR}/skills.json"
-
 # Discovery manifest
 {
   printf '{\n'
@@ -263,12 +252,13 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   printf '    "bootstrap": "/ENTRYPOINT.md",\n'
   printf '    "repo": "/REPO_AGENTS.md",\n'
   printf '    "readme": "/README.md",\n'
+  printf '    "howto": "/docs/HOWTO.md",\n'
   printf '    "prompt_generation": "/docs/PROMPT_GENERATION.md"\n'
   printf '  },\n'
   printf '  "capabilities": {\n'
   printf '    "personas": "Specialized working modes for different delivery roles.",\n'
-  printf '    "scenarios": "Task playbooks for repeatable execution flows.",\n'
-  printf '    "skills": "Combined guides and playbooks that agents can load on demand.",\n'
+  printf '    "skills": "Short previews describing reusable methods, when to use them, and which playbooks to load next.",\n'
+  printf '    "scenarios": "Full execution playbooks for repeatable review and delivery flows.",\n'
   printf '    "docs": "Shared public instructions, tool references, and specifications.",\n'
   printf '    "scripts": "Bootstrap and validation entry points.",\n'
   printf '    "workflows": "Published CI/CD definitions for inspection and reuse."\n'
@@ -289,6 +279,7 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   printf '  "discovery_order": [\n'
   printf '    "/",\n'
   printf '    "/AGENTS.md",\n'
+  printf '    "/docs/HOWTO.md",\n'
   printf '    "/skills.json",\n'
   printf '    "/personas.json",\n'
   printf '    "/scenarios.json"\n'
@@ -302,6 +293,9 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   printf ',\n'
   printf '    "personas": '
   emit_json_array '      ' '    ' "${persona_paths[@]}"
+  printf ',\n'
+  printf '    "skills": '
+  emit_json_array '      ' '    ' "${skills_paths[@]}"
   printf ',\n'
   printf '    "scenarios": '
   emit_json_array '      ' '    ' "${scenario_paths[@]}"
@@ -350,6 +344,7 @@ copy_file "${OUTPUT_DIR}/entrypoint.json" "${OUTPUT_DIR}/index.json"
   echo "- [skills.json](skills.json)"
   echo "- [ENTRYPOINT](ENTRYPOINT.md)"
   echo "- [AGENTS](AGENTS.md)"
+  echo "- [HOWTO](docs/HOWTO.md)"
   echo
   echo "## Root Markdown"
   for root_path in "${root_markdown_paths[@]}"; do
@@ -369,6 +364,13 @@ copy_file "${OUTPUT_DIR}/entrypoint.json" "${OUTPUT_DIR}/index.json"
   for persona_path in "${REPO_ROOT}"/personas/*.md; do
     persona_name="$(basename "${persona_path}")"
     echo "- [${persona_name%.*}](personas/${persona_name})"
+  done
+  echo
+  echo "## Skills"
+  echo "- [catalog](skills.json)"
+  for skill_path in "${REPO_ROOT}"/skills/*.md; do
+    skill_name="$(basename "${skill_path}")"
+    echo "- [${skill_name%.*}](skills/${skill_name})"
   done
   echo
   echo "## Scenarios"

@@ -1,0 +1,125 @@
+{
+  "base_uri": "AGENTS.md",
+  "skills": [
+    {
+      "id": "architecture_audit",
+      "name": "Architecture Audit",
+      "description": "Quick selector for structural reviews, dependency analysis, and boundary cleanup.",
+      "tags": ["architecture", "design", "rust"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["architect", "analyst"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/ARCHITECTURE_AUDIT.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/ARCHITECTURE_AUDIT.md"
+    },
+    {
+      "id": "build_and_ci_review",
+      "name": "Build and CI Review",
+      "description": "Quick selector for validating build reproducibility, workflow safety, and CI quality.",
+      "tags": ["ci", "build", "pipelines"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["devops_engineer", "reliability_security"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/BUILD_AND_CI_REVIEW.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/BUILD_AND_CI_REVIEW.md"
+    },
+    {
+      "id": "dependency_refresh",
+      "name": "Dependency Refresh",
+      "description": "Quick selector for safe toolchain and dependency updates.",
+      "tags": ["maintenance", "dependencies", "rust"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["delivery_engineer", "devops_engineer"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/DEPENDENCY_REFRESH.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/DEPENDENCY_REFRESH.md"
+    },
+    {
+      "id": "developer_experience",
+      "name": "Developer Experience Review",
+      "description": "Quick selector for onboarding, local workflow, and inner-loop improvement work.",
+      "tags": ["dx", "productivity", "tooling"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["delivery_engineer", "analyst"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/DEVELOPER_EXPERIENCE.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/DEVELOPER_EXPERIENCE.md"
+    },
+    {
+      "id": "devsecops_audit",
+      "name": "DevSecOps Audit",
+      "description": "Quick selector for pipeline security, secrets handling, and supply-chain hardening reviews.",
+      "tags": ["security", "devsecops", "compliance"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["devops_engineer", "reliability_security"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/DEVSECOPS_AUDIT.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/DEVSECOPS_AUDIT.md"
+    },
+    {
+      "id": "documentation_contracts",
+      "name": "Documentation and Contracts Review",
+      "description": "Quick selector for checking docs, examples, and published contract consistency.",
+      "tags": ["documentation", "contracts", "quality"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["analyst", "quality_engineer"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/DOCUMENTATION_CONTRACTS.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/DOCUMENTATION_CONTRACTS.md"
+    },
+    {
+      "id": "duplication_reuse",
+      "name": "Duplication and Reuse Review",
+      "description": "Quick selector for consolidation, shared abstractions, and repeated logic cleanup.",
+      "tags": ["refactoring", "reuse", "quality"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["architect", "delivery_engineer"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/DUPLICATION_REUSE.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/DUPLICATION_REUSE.md"
+    },
+    {
+      "id": "performance_hotspots",
+      "name": "Performance Hotspots Review",
+      "description": "Quick selector for CPU, allocation, and IO bottleneck investigation.",
+      "tags": ["performance", "profiling", "rust"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["delivery_engineer", "architect"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/PERFORMANCE_HOTSPOTS.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/PERFORMANCE_HOTSPOTS.md"
+    },
+    {
+      "id": "rust_idioms",
+      "name": "Rust Idioms Review",
+      "description": "Quick selector for idiomatic Rust cleanup and modern language usage.",
+      "tags": ["rust", "quality", "idioms"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["delivery_engineer", "quality_engineer"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/RUST_IDIOMS.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/RUST_IDIOMS.md"
+    },
+    {
+      "id": "test_coverage",
+      "name": "Test Coverage Review",
+      "description": "Quick selector for coverage gaps, flakiness, and release-readiness checks.",
+      "tags": ["testing", "quality", "coverage"],
+      "author": "QQRM",
+      "created_at": "2026-03-17",
+      "version": "0.1",
+      "recommended_personas": ["quality_engineer", "delivery_engineer"],
+      "playbook_uri": "https://qqrm.github.io/codex-tools/scenarios/TEST_COVERAGE.md",
+      "uri": "https://qqrm.github.io/codex-tools/skills/TEST_COVERAGE.md"
+    }
+  ]
+}

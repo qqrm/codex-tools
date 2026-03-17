@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-pages-${{ github.event.workflow_run.head_branch }}
+  group: deploy-pages-${{ github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -226,6 +226,7 @@ jobs:
             docs/index.json
             scripts/index.json
             workflows/index.json
+            skills/index.json
             scenarios/index.json
           )
 
@@ -239,6 +240,10 @@ jobs:
 
           for persona_path in personas/*.md; do
             required_paths+=("${persona_path}")
+          done
+
+          for skill_path in skills/*.md; do
+            required_paths+=("${skill_path}")
           done
 
           for scenario_path in scenarios/*.md; do
