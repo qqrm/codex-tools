@@ -147,7 +147,7 @@ A Rust workspace under [`/crates/`](crates/) regenerates the catalog stored at [
 cargo run --release -p personas-core
 ```
 
-Clients begin with `personas.json` to decide which personas they need, then fetch `AGENTS.md` and the target personas on demand to avoid loading unnecessary Markdown into the working context. Requests to `/catalog.json` return `404 Not Found` by design; update clients rather than adding an alias.
+Clients begin with the base URL `https://qqrm.github.io/codex-tools/`, which resolves to the published root manifest at `index.json`. That cold-start manifest reveals the typed catalogs, the baseline documents, and the machine-readable inventory for guides, scripts, workflows, and reusable skill-like playbooks. From there, clients fetch `AGENTS.md`, `skills.json`, `personas.json`, and the specific Markdown assets they need. Requests to `/catalog.json` return `404 Not Found` by design; update clients rather than adding an alias.
 
 `scripts/build-pages.sh` regenerates the catalog automatically before packaging the Pages artifact. When CI provides a pre-generated catalog, set `PERSONAS_CATALOG_SOURCE` to the artifact path so the script copies it into `personas/catalog.json` instead of invoking `cargo` again.
 
@@ -163,32 +163,40 @@ The latest version of the persona site is served from GitHub Pages at:
 https://qqrm.github.io/codex-tools/
 ```
 
-- `GET /personas.json` — retrieve the catalog, including the `base_uri` pointer to the shared instructions. The deployment does **not** publish `/catalog.json`.
-- `GET /entrypoint.json` — retrieve the machine-readable manifest for the published bundle, including catalogs plus every published Markdown, script, and workflow path.
+- `GET /` — retrieve the cold-start discovery manifest served from `index.json`.
+- `GET /index.json` — retrieve the root machine-readable manifest for the published bundle.
+- `GET /entrypoint.json` — retrieve the same discovery manifest via a stable alias.
+- `GET /skills.json` — retrieve the combined catalog of baseline guides, shared docs, and scenario playbooks.
+- `GET /personas.json` — retrieve the persona catalog, including the `base_uri` pointer to the shared instructions. The deployment does **not** publish `/catalog.json`.
 - `GET /AGENTS.md` — download the shared baseline instructions referenced by `base_uri`.
 - `GET /ENTRYPOINT.md` — fetch the human-readable agent bootstrap guidance referenced by `entrypoint.json`.
+- `GET /docs/index.json` — enumerate the published docs catalog.
 - `GET /docs/{name}.md` — fetch any published shared guidance document.
 - `GET /personas/{id}.md` — retrieve the complete descriptor for the persona with the given `id`.
 - `GET /scenarios.json` — retrieve the scenario catalog alongside persona metadata.
 - `GET /scenarios/{id}.md` — fetch the scenario Markdown when requested by a catalog entry.
+- `GET /scripts/index.json` — enumerate the published bootstrap and validation scripts.
 - `GET /scripts/{name}.sh` — fetch any published bootstrap or validation script.
+- `GET /workflows/index.json` — enumerate the published workflow catalog.
 - `GET /workflows/{name}.yml` — inspect the workflows shipped with the Pages bundle.
 
-Clients should begin with `entrypoint.json`, then fetch `personas.json`, `scenarios.json`, and `AGENTS.md` as needed. This keeps the initial request small while still exposing the full published inventory, including supplemental Markdown files that are intentionally outside the typed scenario catalog.
+Clients should begin with the base URL `/` or `index.json`, then follow the catalogs exposed there. `skills.json` is the fastest way to discover reusable prompts and guidance; `personas.json` and `scenarios.json` remain the typed catalogs for role selection and playbook selection. `entrypoint.json` stays published as an alias for integrations that already depend on that filename.
 
 ### Delivery diagrams
 
 ```mermaid
 flowchart TD
-  Client["Client agent"] -->|"fetch entrypoint"| Entrypoint["GET /entrypoint.json"]
-  Entrypoint -->|"discover catalogs"| Catalog["GET /personas.json<br/>base_uri -> AGENTS.md"]
-  Entrypoint -->|"discover shared docs"| Docs["GET /docs/{name}.md"]
+  Client["Client agent"] -->|"fetch base URL"| Entrypoint["GET /<br/>served from index.json"]
+  Entrypoint -->|"discover catalogs"| Skills["GET /skills.json"]
+  Entrypoint -->|"discover typed personas"| Catalog["GET /personas.json<br/>base_uri -> AGENTS.md"]
+  Entrypoint -->|"discover shared docs"| Docs["GET /docs/index.json"]
   Client -->|"download baseline"| Agents["GET /AGENTS.md"]
   Client -->|"request persona"| Persona["GET /personas/{id}.md"]
   Client -->|"request scenario"| Scenario["GET /scenarios/{id}.md"]
 
   subgraph GitHubPages["GitHub Pages"]
     Entrypoint
+    Skills
     Catalog
     Docs
     Agents
@@ -201,9 +209,9 @@ flowchart TD
 flowchart TD
   Dev["Contributor edits personas, scenarios, docs, and scripts"]
   Generator["cargo run --release -p personas-core<br/>updates personas/catalog.json"]
-  Bundle["scripts/build-pages.sh<br/>packages published assets and entrypoint.json"]
+  Bundle["scripts/build-pages.sh<br/>packages root manifest, skills.json, and catalogs"]
   Validate["scripts/validate-pages.sh<br/>ensures every published source file ships"]
-  Pages["GitHub Pages artifact<br/>entrypoint.json + catalogs + Markdown + scripts"]
+  Pages["GitHub Pages artifact<br/>index.json + entrypoint.json + skills.json + catalogs"]
   Consumers["External automation"]
 
   Dev --> Generator --> Bundle --> Validate --> Pages --> Consumers

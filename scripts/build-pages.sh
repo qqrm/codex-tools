@@ -48,8 +48,8 @@ emit_json_array() {
   shift 2
   local items=("$@")
   local first=1
-  printf '['
   local item
+  printf '['
   for item in "${items[@]}"; do
     if [[ ${first} -eq 1 ]]; then
       printf '\n%s"%s"' "${item_indent}" "${item}"
@@ -64,12 +64,64 @@ emit_json_array() {
   printf ']'
 }
 
+slugify_name() {
+  local value="$1"
+  value="${value,,}"
+  value="${value// /_}"
+  value="${value//-/_}"
+  printf '%s' "${value}"
+}
+
+humanize_name() {
+  local value="$1"
+  value="${value//_/ }"
+  value="${value//-/ }"
+  printf '%s' "${value}"
+}
+
+emit_path_object_array() {
+  local item_indent="$1"
+  local closing_indent="$2"
+  local kind="$3"
+  shift 3
+  local items=("$@")
+  local first=1
+  local item
+  printf '['
+  for item in "${items[@]}"; do
+    local file_name="${item##*/}"
+    local stem="${file_name%.*}"
+    local id
+    local title
+    id="$(slugify_name "${stem}")"
+    title="$(humanize_name "${stem}")"
+    if [[ ${first} -eq 1 ]]; then
+      printf '\n%s{' "${item_indent}"
+      first=0
+    else
+      printf ',\n%s{' "${item_indent}"
+    fi
+    printf '\n%s  "id": "%s",' "${item_indent}" "${id}"
+    printf '\n%s  "title": "%s",' "${item_indent}" "${title}"
+    printf '\n%s  "kind": "%s",' "${item_indent}" "${kind}"
+    printf '\n%s  "uri": "%s"' "${item_indent}" "${item}"
+    printf '\n%s}' "${item_indent}"
+  done
+  if [[ ${first} -eq 0 ]]; then
+    printf '\n%s' "${closing_indent}"
+  fi
+  printf ']'
+}
+
 refresh_personas_catalog() {
   local catalog_target="${REPO_ROOT}/personas/catalog.json"
   if [[ -n "${PERSONAS_CATALOG_SOURCE:-}" ]]; then
     if [[ ! -f "${PERSONAS_CATALOG_SOURCE}" ]]; then
       echo "Error: PERSONAS_CATALOG_SOURCE (${PERSONAS_CATALOG_SOURCE}) not found." >&2
       exit 1
+    fi
+    if [[ "$(cd "$(dirname "${PERSONAS_CATALOG_SOURCE}")" && pwd)/$(basename "${PERSONAS_CATALOG_SOURCE}")" == "${catalog_target}" ]]; then
+      return
     fi
     install -m 0644 "${PERSONAS_CATALOG_SOURCE}" "${catalog_target}"
     return
@@ -141,25 +193,106 @@ for scenario_path in "${REPO_ROOT}"/scenarios/*.md; do
 done
 
 # Catalog copies
-copy_file "${OUTPUT_DIR}/personas/catalog.json" "${OUTPUT_DIR}/index.json"
+copy_file "${OUTPUT_DIR}/personas/catalog.json" "${OUTPUT_DIR}/personas.json"
+copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios/index.json"
+copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
+
+# Machine-readable subcatalogs
 {
   printf '{\n'
-  printf '  "version": 2,\n'
-  printf '  "base_request": "/entrypoint.json",\n'
-  printf '  "baseline": "/AGENTS.md",\n'
-  printf '  "entrypoint": "/ENTRYPOINT.md",\n'
-  printf '  "readme": "/README.md",\n'
-  printf '  "prompt_generation": "/docs/PROMPT_GENERATION.md",\n'
+  printf '  "version": 1,\n'
+  printf '  "kind": "docs_catalog",\n'
+  printf '  "items": '
+  emit_path_object_array '      ' '    ' 'guide' "${docs_paths[@]}"
+  printf '\n'
+  printf '}\n'
+} > "${OUTPUT_DIR}/docs/index.json"
+
+{
+  printf '{\n'
+  printf '  "version": 1,\n'
+  printf '  "kind": "scripts_catalog",\n'
+  printf '  "items": '
+  emit_path_object_array '      ' '    ' 'script' "${scripts_paths[@]}"
+  printf '\n'
+  printf '}\n'
+} > "${OUTPUT_DIR}/scripts/index.json"
+
+{
+  printf '{\n'
+  printf '  "version": 1,\n'
+  printf '  "kind": "workflows_catalog",\n'
+  printf '  "items": '
+  emit_path_object_array '      ' '    ' 'workflow' "${workflow_paths[@]}"
+  printf '\n'
+  printf '}\n'
+} > "${OUTPUT_DIR}/workflows/index.json"
+
+{
+  printf '{\n'
+  printf '  "version": 1,\n'
+  printf '  "base_uri": "/AGENTS.md",\n'
+  printf '  "description": "Reusable prompt assets, guides, and playbooks exposed by this bundle.",\n'
+  printf '  "catalogs": {\n'
+  printf '    "docs": "/docs/index.json",\n'
+  printf '    "scenarios": "/scenarios.json",\n'
+  printf '    "personas": "/personas.json"\n'
+  printf '  },\n'
+  printf '  "baseline_guides": '
+  emit_path_object_array '      ' '    ' 'baseline' "${root_markdown_paths[@]}"
+  printf ',\n'
+  printf '  "shared_guides": '
+  emit_path_object_array '      ' '    ' 'guide' "${docs_paths[@]}"
+  printf ',\n'
+  printf '  "scenario_playbooks": '
+  emit_path_object_array '      ' '    ' 'scenario' "${scenario_paths[@]}"
+  printf '\n'
+  printf '}\n'
+} > "${OUTPUT_DIR}/skills.json"
+
+# Discovery manifest
+{
+  printf '{\n'
+  printf '  "version": 3,\n'
+  printf '  "base_request": "/",\n'
+  printf '  "root_manifest": "/index.json",\n'
+  printf '  "entrypoint": "/entrypoint.json",\n'
+  printf '  "description": "Cold-start discovery manifest for the published Codex Tools bundle.",\n'
+  printf '  "baseline": {\n'
+  printf '    "shared": "/AGENTS.md",\n'
+  printf '    "bootstrap": "/ENTRYPOINT.md",\n'
+  printf '    "repo": "/REPO_AGENTS.md",\n'
+  printf '    "readme": "/README.md",\n'
+  printf '    "prompt_generation": "/docs/PROMPT_GENERATION.md"\n'
+  printf '  },\n'
+  printf '  "capabilities": {\n'
+  printf '    "personas": "Specialized working modes for different delivery roles.",\n'
+  printf '    "scenarios": "Task playbooks for repeatable execution flows.",\n'
+  printf '    "skills": "Combined guides and playbooks that agents can load on demand.",\n'
+  printf '    "docs": "Shared public instructions, tool references, and specifications.",\n'
+  printf '    "scripts": "Bootstrap and validation entry points.",\n'
+  printf '    "workflows": "Published CI/CD definitions for inspection and reuse."\n'
+  printf '  },\n'
   printf '  "catalogs": {\n'
   printf '    "personas": "/personas.json",\n'
   printf '    "scenarios": "/scenarios.json",\n'
-  printf '    "legacy_personas_index": "/index.json"\n'
+  printf '    "skills": "/skills.json",\n'
+  printf '    "docs": "/docs/index.json",\n'
+  printf '    "scripts": "/scripts/index.json",\n'
+  printf '    "workflows": "/workflows/index.json"\n'
   printf '  },\n'
   printf '  "bootstrap": {\n'
   printf '    "base": "/scripts/BaseInitialization.sh",\n'
   printf '    "full": "/scripts/FullInitialization.sh",\n'
   printf '    "pretask": "/scripts/PretaskInitialization.sh"\n'
   printf '  },\n'
+  printf '  "discovery_order": [\n'
+  printf '    "/",\n'
+  printf '    "/AGENTS.md",\n'
+  printf '    "/skills.json",\n'
+  printf '    "/personas.json",\n'
+  printf '    "/scenarios.json"\n'
+  printf '  ],\n'
   printf '  "published": {\n'
   printf '    "root_markdown": '
   emit_json_array '      ' '    ' "${root_markdown_paths[@]}"
@@ -203,9 +336,7 @@ copy_file "${OUTPUT_DIR}/personas/catalog.json" "${OUTPUT_DIR}/index.json"
   printf '  ]\n'
   printf '}\n'
 } > "${OUTPUT_DIR}/entrypoint.json"
-copy_file "${OUTPUT_DIR}/personas/catalog.json" "${OUTPUT_DIR}/personas.json"
-copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios/index.json"
-copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
+copy_file "${OUTPUT_DIR}/entrypoint.json" "${OUTPUT_DIR}/index.json"
 
 # Landing page markdown
 {
@@ -214,7 +345,9 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   echo "Published bundle: https://qqrm.github.io/codex-tools/"
   echo
   echo "## Base discovery"
+  echo "- [index.json](index.json)"
   echo "- [entrypoint.json](entrypoint.json)"
+  echo "- [skills.json](skills.json)"
   echo "- [ENTRYPOINT](ENTRYPOINT.md)"
   echo "- [AGENTS](AGENTS.md)"
   echo
@@ -225,6 +358,7 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   done
   echo
   echo "## Shared Docs"
+  echo "- [catalog](docs/index.json)"
   for doc_path in "${docs_paths[@]}"; do
     doc_name="${doc_path#/docs/}"
     echo "- [${doc_name}](docs/${doc_name})"
@@ -245,12 +379,14 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   done
   echo
   echo "## Scripts"
+  echo "- [catalog](scripts/index.json)"
   for script_path in "${REPO_ROOT}"/scripts/*.sh; do
     script_name="$(basename "${script_path}")"
     echo "- [${script_name}](scripts/${script_name})"
   done
   echo
   echo "## Workflows"
+  echo "- [catalog](workflows/index.json)"
   for workflow_path in "${REPO_ROOT}"/.github/workflows/*.yml; do
     workflow_name="$(basename "${workflow_path}")"
     echo "- [${workflow_name}](workflows/${workflow_name})"

@@ -29,12 +29,16 @@ required_paths=(
   index.md
   index.json
   entrypoint.json
+  skills.json
   ENTRYPOINT.md
   personas/catalog.json
   personas.json
   scenarios/catalog.json
   scenarios/index.json
   scenarios.json
+  docs/index.json
+  scripts/index.json
+  workflows/index.json
 )
 
 shopt -s nullglob

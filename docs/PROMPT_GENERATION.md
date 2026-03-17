@@ -2,7 +2,7 @@
 
 This document defines how to generate context-efficient prompts for an execution agent.
 
-Use `entrypoint.json` to discover this document when the repository is consumed over GitHub Pages.
+Use the root manifest at `/` or `index.json` to discover this document when the repository is consumed over GitHub Pages. `entrypoint.json` remains a published alias for the same manifest.
 
 ## Purpose
 

@@ -2,7 +2,7 @@
 
 Use this repository as a shared baseline for agent work. It is not the source of truth for any specific product repository.
 
-When accessing the published bundle over GitHub Pages, start with `entrypoint.json` to discover the current catalogs, Markdown guides, scripts, and workflow paths before loading individual files.
+When accessing the published bundle over GitHub Pages, start with the base URL `/` (served from `index.json`) or with `entrypoint.json` to discover the current catalogs, Markdown guides, scripts, and workflow paths before loading individual files.
 
 ## Resolution Order
 
@@ -17,7 +17,8 @@ Load context in this order:
 ## How To Use This Repository
 
 - Treat the root `AGENTS.md` as the global baseline.
-- Use `entrypoint.json` as the machine-readable inventory for published files.
+- Use the root manifest at `/` or `index.json` as the machine-readable inventory for published files.
+- Load `skills.json` when you need a compact list of reusable guides and scenario playbooks.
 - Select one persona that matches the dominant task mode.
 - Load only the scenarios that directly help with the current work.
 - Prefer repository-local instructions over these shared defaults when they conflict.
