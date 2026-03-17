@@ -313,6 +313,7 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   printf '    "repo_done_criteria",\n'
   printf '    "shared_baseline",\n'
   printf '    "selected_persona",\n'
+  printf '    "selected_skills",\n'
   printf '    "selected_scenarios"\n'
   printf '  ],\n'
   printf '  "mcp_policy": {\n'
