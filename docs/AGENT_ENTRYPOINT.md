@@ -2,7 +2,7 @@
 
 Use this repository as a shared baseline for agent work. It is not the source of truth for any specific product repository.
 
-When accessing the published bundle over GitHub Pages, start with the base URL `/` (served from `index.json`) or with `entrypoint.json` to discover the current catalogs, Markdown guides, scripts, and workflow paths before loading individual files.
+When accessing the published bundle over GitHub Pages, start with the base URL `/` (served from `index.json`) or with `entrypoint.json` to discover the current cold-start catalogs, Markdown guides, and workflow paths before loading individual files.
 
 ## Resolution Order
 
@@ -40,15 +40,12 @@ Do not fetch remote baseline files repeatedly during one task if the same conten
 
 ## Environment Bootstrap
 
-Use the published bootstrap scripts only for Codex Web or other ephemeral remote environments that require static setup entrypoints:
-- `scripts/BaseInitialization.sh` for base environment setup
-- `scripts/FullInitialization.sh` for full environment preparation
-- `scripts/PretaskInitialization.sh` for lightweight task refresh
+Published bootstrap scripts exist under `/scripts/`, but they are intentionally outside the cold-start discovery path. Load them only when the task explicitly targets Codex Web or another ephemeral remote environment that requires static setup entrypoints.
 
 For local agents, do not default to these scripts. Prefer repository-local setup instructions or install the missing tools directly when needed.
 
 If a required tool is missing:
-- first check whether one of the provided scripts or repository docs already covers it;
+- first check repository-local setup instructions and shared docs;
 - install it yourself when this is safe, reproducible, and necessary to complete the task;
 - otherwise surface the blocker clearly.
 

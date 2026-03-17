@@ -6,6 +6,8 @@ The published persona site is available at:
 https://qqrm.github.io/codex-tools/
 ```
 
+## Cold-start endpoints
+
 - `GET /` or `GET /index.json` — retrieve the cold-start discovery manifest for the published bundle.
 - `GET /entrypoint.json` — retrieve the same discovery manifest via a stable alias.
 - `GET /skills.json` — retrieve the first-class skills catalog with short previews, recommended personas, and follow-up playbook links.
@@ -19,16 +21,19 @@ https://qqrm.github.io/codex-tools/
 - `GET /skills/{id}.md` — retrieve the complete descriptor for the skill with the given `id`.
 - `GET /scenarios.json` — retrieve the scenario catalog for reusable execution playbooks. Each entry links to Markdown prompts stored alongside personas.
 - `GET /scenarios/{id}.md` — retrieve the scenario Markdown requested by the catalog entry.
-- `GET /scripts/index.json` — retrieve the shell-script catalog for bootstrap and validation entry points.
-- `GET /scripts/{name}.sh` — fetch any published bootstrap or validation shell script.
 - `GET /workflows/index.json` — retrieve the workflow catalog for published CI/CD definitions.
 - `GET /workflows/{name}.yml` — inspect the workflows shipped with the published bundle.
 
-Clients that need a complete inventory should start with `/` or `index.json` and treat `skills.json`, `personas.json`, and `scenarios.json` as layered catalogs exposed by that root manifest. The recommended cold-start order is `AGENTS.md`, `docs/HOWTO.md`, one persona, one or more skills, and then only the scenarios needed for the task. This is important because the repository also publishes supplemental Markdown guides, script entry points, and workflow definitions that are intentionally outside the typed persona and scenario catalogs.
+Clients that need the standard shared baseline should start with `/` or `index.json` and treat `skills.json`, `personas.json`, and `scenarios.json` as layered catalogs exposed by that root manifest. The recommended cold-start order is `AGENTS.md`, `docs/HOWTO.md`, one persona, one or more skills, and then only the scenarios needed for the task.
 
-The published bootstrap scripts under `/scripts/` are intended for Codex Web or other ephemeral remote environments. Local agents should prefer repository-local setup instructions and direct local tool installation instead of defaulting to those remote scripts.
+## Supplemental direct endpoints
 
-# Response Guidelines
+The repository also publishes direct shell-script assets under `/scripts/`, but they are intentionally outside the cold-start discovery manifest so local agents do not treat them as default inputs. Use them only when the task explicitly targets Codex Web or another ephemeral remote bootstrap flow.
+
+- `GET /scripts/index.json` — retrieve the shell-script catalog for bootstrap and validation entry points.
+- `GET /scripts/{name}.sh` — fetch any published bootstrap or validation shell script.
+
+## Response Guidelines
 
 - Share analytical findings and status updates directly in the conversation unless the task explicitly requires repository artifacts.
 - Avoid committing ad-hoc reports or chat transcripts into the repository unless they are part of the deliverable specification.

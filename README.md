@@ -81,7 +81,7 @@ git fetch origin
 
 ### Codex Web bootstrap commands
 
-Three published entry points cover the common Codex Web container workflows. Each snippet downloads the script from the GitHub Pages deployment and executes it directly:
+Three published direct URLs cover the common Codex Web container workflows. These assets stay publicly reachable, but they are intentionally outside the cold-start agent manifest so local agents do not discover them by default. Each snippet downloads the script from the GitHub Pages deployment and executes it directly:
 
 > **Note:** The scripts refresh shared instructions from GitHub Pages before running. Override the download origin by exporting `PAGES_BASE_URL` when testing mirrors or forks.
 
@@ -130,7 +130,7 @@ External clients rely on a small set of shared files published alongside the per
 - [`AGENTS.md`](AGENTS.md) — the baseline instructions served to external agents, embedded in and linked from the published `personas.json` catalog.
 - [`docs/HOWTO.md`](docs/HOWTO.md) — the agent-facing selection guide for personas, skills, and scenarios.
 - [`INSTRUCTIONS.md`](docs/INSTRUCTIONS.md) — a condensed description of the HTTP API exposed via GitHub Pages.
-- [`skills/catalog.json`](skills/catalog.json) — the typed skills catalog published as `skills.json`.
+- [`skills/catalog.json`](skills/catalog.json) — the generated skills catalog published as `skills.json`. Do not edit it manually; rebuild it from the skill-card front matter.
 
 Repository tooling keeps these artifacts in sync for local use:
 
@@ -165,13 +165,13 @@ The published bundle initializes Codex Web-compatible containers by installing s
 
 ## Tooling
 
-A Rust workspace under [`/crates/`](crates/) regenerates the catalog stored at [`personas/catalog.json`](personas/catalog.json) by parsing the persona front matter and bundling both the base instructions and persona metadata. The GitHub Pages deployment exposes this catalog as `personas.json` (the legacy `/catalog.json` alias is intentionally unavailable; clients must request `/personas.json`). The deployment pipeline rebuilds the index automatically whenever `main` changes, so running the generator locally is only necessary for debugging or previewing changes. Build the index with:
+A Rust workspace under [`/crates/`](crates/) regenerates the catalog stored at [`personas/catalog.json`](personas/catalog.json) by parsing the persona front matter and bundling both the base instructions and persona metadata. `scripts/build-pages.sh` also regenerates [`skills/catalog.json`](skills/catalog.json) directly from the skill-card front matter before packaging the Pages artifact, so skill metadata no longer depends on manual synchronization. The GitHub Pages deployment exposes these catalogs as `personas.json` and `skills.json` (the legacy `/catalog.json` alias is intentionally unavailable; clients must request `/personas.json`). The deployment pipeline rebuilds the indexes automatically whenever `main` changes, so running the generators locally is only necessary for debugging or previewing changes. Build the persona index with:
 
 ```bash
 cargo run --release -p personas-core
 ```
 
-Clients begin with the base URL `https://qqrm.github.io/codex-tools/`, which resolves to the published root manifest at `index.json`. That cold-start manifest reveals the typed catalogs, the baseline documents, and the machine-readable inventory for guides, scripts, workflows, skills, and scenarios. From there, clients fetch `AGENTS.md`, `docs/HOWTO.md`, `skills.json`, `personas.json`, and the specific Markdown assets they need. Requests to `/catalog.json` return `404 Not Found` by design; update clients rather than adding an alias.
+Clients begin with the base URL `https://qqrm.github.io/codex-tools/`, which resolves to the published root manifest at `index.json`. That cold-start manifest reveals the typed catalogs, the baseline documents, and the machine-readable inventory for guides, workflows, skills, and scenarios. The published `/scripts/` assets remain available by direct URL, but they are intentionally outside the cold-start manifest so local agents do not treat remote bootstrap scripts as default inputs. From there, clients fetch `AGENTS.md`, `docs/HOWTO.md`, `skills.json`, `personas.json`, and the specific Markdown assets they need. Requests to `/catalog.json` return `404 Not Found` by design; update clients rather than adding an alias.
 
 `scripts/build-pages.sh` regenerates the catalog automatically before packaging the Pages artifact. When CI provides a pre-generated catalog, set `PERSONAS_CATALOG_SOURCE` to the artifact path so the script copies it into `personas/catalog.json` instead of invoking `cargo` again.
 
@@ -201,10 +201,13 @@ https://qqrm.github.io/codex-tools/
 - `GET /skills/{id}.md` — retrieve the complete skill card for the requested method.
 - `GET /scenarios.json` — retrieve the scenario catalog alongside persona metadata.
 - `GET /scenarios/{id}.md` — fetch the scenario Markdown when requested by a catalog entry.
-- `GET /scripts/index.json` — enumerate the published bootstrap and validation scripts.
-- `GET /scripts/{name}.sh` — fetch any published bootstrap or validation script.
 - `GET /workflows/index.json` — enumerate the published workflow catalog.
 - `GET /workflows/{name}.yml` — inspect the workflows shipped with the Pages bundle.
+
+Supplemental direct endpoints outside the cold-start manifest:
+
+- `GET /scripts/index.json` — enumerate the published bootstrap and validation scripts.
+- `GET /scripts/{name}.sh` — fetch any published bootstrap or validation script.
 
 Clients should begin with the base URL `/` or `index.json`, then follow the catalogs exposed there. The recommended cold-start order is `AGENTS.md`, `docs/HOWTO.md`, one persona, one or more skills, and only then the matching scenario playbooks. `entrypoint.json` stays published as an alias for integrations that already depend on that filename.
 
@@ -218,6 +221,7 @@ flowchart TD
   Entrypoint -->|"discover skills"| Skills["GET /skills.json"]
   Entrypoint -->|"discover typed personas"| Catalog["GET /personas.json<br/>base_uri -> AGENTS.md"]
   Entrypoint -->|"discover shared docs"| Docs["GET /docs/index.json"]
+  Note["/scripts/* stays published but outside cold-start discovery"]
   Client -->|"request persona"| Persona["GET /personas/{id}.md"]
   Client -->|"request skill"| Skill["GET /skills/{id}.md"]
   Client -->|"request scenario"| Scenario["GET /scenarios/{id}.md"]
@@ -232,6 +236,7 @@ flowchart TD
     Persona
     Skill
     Scenario
+    Note
   end
 ```
 
@@ -239,12 +244,13 @@ flowchart TD
 flowchart TD
   Dev["Contributor edits personas, scenarios, docs, and scripts"]
   Generator["cargo run --release -p personas-core<br/>updates personas/catalog.json"]
+  SkillsGen["scripts/build-pages.sh<br/>regenerates skills/catalog.json from skill cards"]
   Bundle["scripts/build-pages.sh<br/>packages root manifest, skills.json, HOWTO, and catalogs"]
   Validate["scripts/validate-pages.sh<br/>ensures every published source file ships"]
   Pages["GitHub Pages artifact<br/>index.json + entrypoint.json + skills.json + catalogs"]
   Consumers["External automation"]
 
-  Dev --> Generator --> Bundle --> Validate --> Pages --> Consumers
+  Dev --> Generator --> SkillsGen --> Bundle --> Validate --> Pages --> Consumers
 ```
 
 Continuous integration runs the full validation pipeline:

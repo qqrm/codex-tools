@@ -76,6 +76,19 @@ for relative_path in "${required_paths[@]}"; do
   check_path "${relative_path}"
 done
 
+if command -v jq >/dev/null 2>&1; then
+  if ! jq -e '
+    (.capabilities | has("scripts") | not) and
+    (.catalogs | has("scripts") | not) and
+    (has("bootstrap") | not) and
+    (.published | has("scripts") | not) and
+    (.baseline | has("readme") | not)
+  ' "${OUTPUT_DIR}/index.json" > /dev/null; then
+    echo "Root discovery manifest must not expose scripts or README as part of the cold-start API." >&2
+    missing=1
+  fi
+fi
+
 legacy_paths=(
   scripts/split-initialization-cached-base.sh
   scripts/full-initialization.sh

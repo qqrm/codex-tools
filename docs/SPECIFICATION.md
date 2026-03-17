@@ -274,7 +274,7 @@ The catalog schema is:
 
 ### 6.2 Skills catalog
 
-Skills are indexed in `skills/catalog.json`, which is checked into the repository and published as both `skills.json` and `skills/index.json`. Example:
+Skills are indexed in `skills/catalog.json`, which is generated automatically from the skill-card front matter and published as both `skills.json` and `skills/index.json`. Example:
 
 ```json
 {
@@ -326,8 +326,10 @@ GitHub Pages publishes a root discovery manifest at `/` (served from `index.json
 
 - the baseline documents (`AGENTS.md`, `ENTRYPOINT.md`, `docs/HOWTO.md`, prompt-generation guide);
 - the typed catalogs (`personas.json`, `skills.json`, `scenarios.json`);
-- the support catalogs (`docs/index.json`, `scripts/index.json`, `workflows/index.json`);
-- every published root Markdown file, shared doc, persona file, skill file, scenario file, shell script, and workflow path.
+- the support catalogs needed for normal agent discovery (`docs/index.json`, `workflows/index.json`);
+- every published root Markdown file, shared doc, persona file, skill file, scenario file, and workflow path that belongs in the cold-start inventory.
+
+Bootstrap shell scripts remain publicly available under `/scripts/`, but they are intentionally excluded from the root cold-start manifest so local agents do not treat them as default inputs.
 
 This allows agents to start with a single lightweight request, then fetch only the files they need.
 
@@ -361,19 +363,22 @@ GitHub Pages exposes the repository at `https://qqrm.github.io/codex-tools/`. Cl
 - **Full skill card:** `GET /skills/{id}.md`.
 - **Scenario catalog:** `GET /scenarios.json`.
 - **Full scenario or supplemental guide:** `GET /scenarios/{id}.md`.
-- **Scripts catalog:** `GET /scripts/index.json`.
-- **Published shell scripts:** `GET /scripts/{name}.sh`.
 - **Workflows catalog:** `GET /workflows/index.json`.
 - **Published workflows:** `GET /workflows/{name}.yml`.
+
+The repository also exposes supplemental direct script endpoints outside the cold-start manifest:
+
+- **Scripts catalog:** `GET /scripts/index.json`.
+- **Published shell scripts:** `GET /scripts/{name}.sh`.
 
 The published shell scripts are for Codex Web or other ephemeral remote environments that need static bootstrap entrypoints. Local agents should prefer repository-local setup instructions or direct local installation instead of treating these scripts as mandatory.
 
 ## 8. Extensibility and Tooling
 
 - Add new personas by committing additional Markdown files under `/personas/` with the required front matter.
-- Add new skills by committing additional Markdown files under `/skills/` plus the corresponding entry in `skills/catalog.json`.
+- Add new skills by committing additional Markdown files under `/skills/`; the build regenerates `skills/catalog.json` automatically from front matter.
 - Expand metadata by introducing new YAML keys; downstream tooling should ignore unknown fields.
-- The Rust workspace under `crates/` regenerates `personas/catalog.json` via `cargo run --release`; the GitHub Pages deployment publishes the result as `personas.json` and packages the broader discovery manifests as `index.json` and `entrypoint.json`, plus the support catalogs under `/docs/`, `/scripts/`, `/workflows/`, and `/skills/`.
+- The Rust workspace under `crates/` regenerates `personas/catalog.json` via `cargo run --release`; `scripts/build-pages.sh` also regenerates `skills/catalog.json` from the skill cards before packaging the GitHub Pages artifact. The deployment publishes the result as `personas.json`, `skills.json`, and the broader discovery manifests as `index.json` and `entrypoint.json`, plus the support catalogs under `/docs/`, `/scripts/`, `/workflows/`, and `/skills/`.
 
 ## 9. Relationship to README
 

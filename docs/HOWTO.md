@@ -55,7 +55,7 @@ Load docs when you need reference material. Load skills when you need task selec
 
 ## Bootstrap Script Rule
 
-`BaseInitialization.sh`, `FullInitialization.sh`, and `PretaskInitialization.sh` are intended for Codex Web / ephemeral remote environments where static bootstrap scripts are needed.
+`BaseInitialization.sh`, `FullInitialization.sh`, and `PretaskInitialization.sh` are intended for Codex Web / ephemeral remote environments where static bootstrap scripts are needed. They stay published as direct URLs under `/scripts/`, but they are intentionally outside the cold-start discovery manifest and are not part of the default local-agent flow.
 
 Local agents should not treat these scripts as their default path. For a local agent:
 

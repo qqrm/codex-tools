@@ -135,8 +135,168 @@ refresh_personas_catalog() {
   (cd "${REPO_ROOT}" && cargo run --release -p personas-core)
 }
 
+refresh_skills_catalog() {
+  local skills_dir="${REPO_ROOT}/skills"
+  local scenarios_dir="${REPO_ROOT}/scenarios"
+  local catalog_target="${skills_dir}/catalog.json"
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "Error: python3 is required to regenerate skills/catalog.json." >&2
+    exit 1
+  fi
+
+  REPO_ROOT="${REPO_ROOT}" \
+  SKILLS_DIR="${skills_dir}" \
+  SCENARIOS_DIR="${scenarios_dir}" \
+  CATALOG_TARGET="${catalog_target}" \
+  python3 <<'PY_SKILLS'
+import json
+import os
+import pathlib
+import sys
+
+repo_root = pathlib.Path(os.environ["REPO_ROOT"])
+skills_dir = pathlib.Path(os.environ["SKILLS_DIR"])
+scenarios_dir = pathlib.Path(os.environ["SCENARIOS_DIR"])
+catalog_target = pathlib.Path(os.environ["CATALOG_TARGET"])
+base_url = os.environ.get("PAGES_BASE_URL", "https://qqrm.github.io/codex-tools").rstrip("/")
+
+
+def fail(message: str) -> None:
+    print(f"Error: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def parse_scalar(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
+
+
+def parse_inline_list(value: str, source: pathlib.Path, line_number: int) -> list[str]:
+    value = value.strip()
+    if value == "[]":
+        return []
+    if not (value.startswith("[") and value.endswith("]")):
+        fail(f"expected inline list in {source}:{line_number}: {value}")
+    inner = value[1:-1].strip()
+    if not inner:
+        return []
+    items = []
+    for raw_item in inner.split(","):
+        item = parse_scalar(raw_item.strip())
+        if not item:
+            fail(f"empty list item in {source}:{line_number}")
+        items.append(item)
+    return items
+
+
+def parse_front_matter(content: str, source: pathlib.Path) -> dict[str, object]:
+    normalized = content.replace("\r\n", "\n")
+    if normalized.startswith("\ufeff"):
+        normalized = normalized[1:]
+    if not normalized.startswith("---\n"):
+        fail(f"skill front matter missing in {source}")
+    remainder = normalized[4:]
+    marker = remainder.find("\n---")
+    if marker < 0:
+        fail(f"skill front matter malformed in {source}")
+    yaml_block = remainder[:marker].strip()
+    metadata: dict[str, object] = {}
+    for line_number, raw_line in enumerate(yaml_block.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        if ":" not in line:
+            fail(f"unsupported YAML line in {source}:{line_number}: {raw_line}")
+        key, value = line.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if key in {"tags", "recommended_personas"}:
+            metadata[key] = parse_inline_list(value, source, line_number)
+        else:
+            metadata[key] = parse_scalar(value)
+    return metadata
+
+
+if not skills_dir.is_dir():
+    fail(f"skills directory missing: {skills_dir}")
+if not scenarios_dir.is_dir():
+    fail(f"scenarios directory missing: {scenarios_dir}")
+if not (repo_root / "AGENTS.md").is_file():
+    fail(f"AGENTS.md missing: {repo_root / 'AGENTS.md'}")
+
+entries: list[dict[str, object]] = []
+seen_ids: dict[str, pathlib.Path] = {}
+required_fields = [
+    "id",
+    "name",
+    "description",
+    "tags",
+    "author",
+    "created_at",
+    "version",
+    "recommended_personas",
+    "playbook_uri",
+]
+
+for skill_path in sorted(skills_dir.glob("*.md")):
+    metadata = parse_front_matter(skill_path.read_text(encoding="utf-8"), skill_path)
+    missing = [field for field in required_fields if field not in metadata]
+    if missing:
+        fail(f"missing required fields in {skill_path}: {', '.join(missing)}")
+
+    skill_id = str(metadata["id"])
+    if skill_id in seen_ids:
+        fail(
+            f"duplicate skill id `{skill_id}` found in {skill_path} "
+            f"(already defined in {seen_ids[skill_id]})"
+        )
+    seen_ids[skill_id] = skill_path
+
+    playbook_uri = str(metadata["playbook_uri"])
+    if playbook_uri.startswith("/"):
+        scenario_path = repo_root / playbook_uri.lstrip("/")
+        if not scenario_path.is_file():
+            fail(f"playbook_uri target missing for {skill_path}: {playbook_uri}")
+        published_playbook_uri = f"{base_url}{playbook_uri}"
+    elif playbook_uri.startswith("http://") or playbook_uri.startswith("https://"):
+        published_playbook_uri = playbook_uri
+    else:
+        fail(
+            f"playbook_uri must be absolute URL or root-relative path in {skill_path}: "
+            f"{playbook_uri}"
+        )
+
+    relative_uri = "/" + skill_path.relative_to(repo_root).as_posix()
+    entries.append(
+        {
+            "id": skill_id,
+            "name": str(metadata["name"]),
+            "description": str(metadata["description"]),
+            "tags": list(metadata["tags"]),
+            "author": str(metadata["author"]),
+            "created_at": str(metadata["created_at"]),
+            "version": str(metadata["version"]),
+            "recommended_personas": list(metadata["recommended_personas"]),
+            "playbook_uri": published_playbook_uri,
+            "uri": f"{base_url}{relative_uri}",
+        }
+    )
+
+entries.sort(key=lambda item: item["id"])
+output = {
+    "base_uri": "AGENTS.md",
+    "skills": entries,
+}
+catalog_target.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY_SKILLS
+}
+
 # Personas and catalogs
 refresh_personas_catalog
+refresh_skills_catalog
 mkdir -p "${OUTPUT_DIR}/personas"
 cp -a "${REPO_ROOT}/personas/." "${OUTPUT_DIR}/personas/"
 
@@ -242,7 +402,7 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
 # Discovery manifest
 {
   printf '{\n'
-  printf '  "version": 3,\n'
+  printf '  "version": 4,\n'
   printf '  "base_request": "/",\n'
   printf '  "root_manifest": "/index.json",\n'
   printf '  "entrypoint": "/entrypoint.json",\n'
@@ -251,7 +411,6 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   printf '    "shared": "/AGENTS.md",\n'
   printf '    "bootstrap": "/ENTRYPOINT.md",\n'
   printf '    "repo": "/REPO_AGENTS.md",\n'
-  printf '    "readme": "/README.md",\n'
   printf '    "howto": "/docs/HOWTO.md",\n'
   printf '    "prompt_generation": "/docs/PROMPT_GENERATION.md"\n'
   printf '  },\n'
@@ -260,7 +419,6 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   printf '    "skills": "Short previews describing reusable methods, when to use them, and which playbooks to load next.",\n'
   printf '    "scenarios": "Full execution playbooks for repeatable review and delivery flows.",\n'
   printf '    "docs": "Shared public instructions, tool references, and specifications.",\n'
-  printf '    "scripts": "Bootstrap and validation entry points.",\n'
   printf '    "workflows": "Published CI/CD definitions for inspection and reuse."\n'
   printf '  },\n'
   printf '  "catalogs": {\n'
@@ -268,13 +426,7 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   printf '    "scenarios": "/scenarios.json",\n'
   printf '    "skills": "/skills.json",\n'
   printf '    "docs": "/docs/index.json",\n'
-  printf '    "scripts": "/scripts/index.json",\n'
   printf '    "workflows": "/workflows/index.json"\n'
-  printf '  },\n'
-  printf '  "bootstrap": {\n'
-  printf '    "base": "/scripts/BaseInitialization.sh",\n'
-  printf '    "full": "/scripts/FullInitialization.sh",\n'
-  printf '    "pretask": "/scripts/PretaskInitialization.sh"\n'
   printf '  },\n'
   printf '  "discovery_order": [\n'
   printf '    "/",\n'
@@ -299,9 +451,6 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
   printf ',\n'
   printf '    "scenarios": '
   emit_json_array '      ' '    ' "${scenario_paths[@]}"
-  printf ',\n'
-  printf '    "scripts": '
-  emit_json_array '      ' '    ' "${scripts_paths[@]}"
   printf ',\n'
   printf '    "workflows": '
   emit_json_array '      ' '    ' "${workflow_paths[@]}"
@@ -381,7 +530,7 @@ copy_file "${OUTPUT_DIR}/entrypoint.json" "${OUTPUT_DIR}/index.json"
     echo "- [${scenario_name%.*}](scenarios/${scenario_name})"
   done
   echo
-  echo "## Scripts"
+  echo "## Supplemental Scripts (Codex Web only; outside cold-start API)"
   echo "- [catalog](scripts/index.json)"
   for script_path in "${REPO_ROOT}"/scripts/*.sh; do
     script_name="$(basename "${script_path}")"
