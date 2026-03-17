@@ -105,6 +105,71 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
       - name: Smoke test published endpoints
-        run: >
-          bash -euo pipefail -c 'repo_ref="${GITHUB_REPOSITORY}"; owner="${repo_ref%%/*}"; repo="${repo_ref#*/}"; owner="${owner,,}"; repo="${repo,,}"; base_url="https://${owner}.github.io/${repo}"; sleep 10; for path in index.json personas.json AGENTS.md docs/INSTRUCTIONS.md README.md docs/SPECIFICATION.md static.json workflows/codex-cleanup.yml scripts/BaseInitialization.sh scripts/FullInitialization.sh scripts/PretaskInitialization.sh; do echo "Validating ${base_url}/${path}"; for attempt in 1 2 3 4 5; do if curl --fail --silent --show-error --location "${base_url}/${path}" > /dev/null; then echo "  OK on attempt ${attempt}"; break; fi; if [ "${attempt}" -eq 5 ]; then echo "  Failed after ${attempt} attempts" >&2; exit 1; fi; sleep 5; done; done'
+        run: |
+          bash -euo pipefail <<'EOF'
+          repo_ref="${GITHUB_REPOSITORY}"
+          owner="${repo_ref%%/*}"
+          repo="${repo_ref#*/}"
+          owner="${owner,,}"
+          repo="${repo,,}"
+          base_url="https://${owner}.github.io/${repo}"
+
+          shopt -s nullglob
+
+          required_paths=(
+            index.json
+            personas.json
+            scenarios.json
+            entrypoint.json
+            ENTRYPOINT.md
+            static.json
+            scenarios/index.json
+          )
+
+          for root_markdown in *.md; do
+            required_paths+=("${root_markdown}")
+          done
+
+          for doc_path in docs/*.md; do
+            required_paths+=("${doc_path}")
+          done
+
+          for persona_path in personas/*.md; do
+            required_paths+=("${persona_path}")
+          done
+
+          for scenario_path in scenarios/*.md; do
+            required_paths+=("${scenario_path}")
+          done
+
+          for script_path in scripts/*.sh; do
+            required_paths+=("${script_path}")
+          done
+
+          for workflow_path in .github/workflows/*.yml; do
+            required_paths+=("workflows/$(basename "${workflow_path}")")
+          done
+
+          sleep 10
+
+          for path in "${required_paths[@]}"; do
+            echo "Validating ${base_url}/${path}"
+            for attempt in 1 2 3 4 5; do
+              if curl --fail --silent --show-error --location "${base_url}/${path}" > /dev/null; then
+                echo "  OK on attempt ${attempt}"
+                break
+              fi
+              if [ "${attempt}" -eq 5 ]; then
+                echo "  Failed after ${attempt} attempts" >&2
+                exit 1
+              fi
+              sleep 5
+            done
+          done
+          EOF
