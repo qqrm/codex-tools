@@ -20,9 +20,10 @@ jobs:
     name: Build and validate pages
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      pages_artifact_id: ${{ steps.upload_pages_artifact.outputs['artifact-id'] }}
     permissions:
       contents: read
-      pages: write
 
     steps:
       - name: Checkout
@@ -57,13 +58,25 @@ jobs:
       - name: Validate pages
         run: ./scripts/validate-pages.sh
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+      - name: Package Pages artifact
+        run: |
+          tar \
+            --dereference --hard-dereference \
+            --directory ./public \
+            --create \
+            --file "${RUNNER_TEMP}/github-pages.tar" \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude='.[^/]*' \
+            .
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        id: upload_pages_artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          path: ./public
+          name: github-pages
+          path: ${{ runner.temp }}/github-pages.tar
+          retention-days: 1
 
   deploy:
     name: Deploy GitHub Pages
@@ -78,9 +91,101 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Deploy
+      - name: Verify Pages settings
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type')"
+          if [ "${build_type}" != "workflow" ]; then
+            echo "GitHub Pages must be configured for workflow deployments, got build_type=${build_type}." >&2
+            exit 1
+          fi
+
+      - name: Request Pages OIDC token
+        id: oidc
+        run: |
+          response="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            -H "Accept: application/json; api-version=2.0" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}")"
+
+          token="$(printf '%s' "${response}" | jq -r '.value')"
+          if [ -z "${token}" ] || [ "${token}" = "null" ]; then
+            echo "OIDC token response did not contain a token." >&2
+            exit 1
+          fi
+
+          echo "::add-mask::${token}"
+          echo "token=${token}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create Pages deployment
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ needs.build.outputs.pages_artifact_id }}
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          payload="$(jq -cn \
+            --argjson artifact_id "${ARTIFACT_ID}" \
+            --arg build_version "${GITHUB_SHA}" \
+            --arg oidc_token "${OIDC_TOKEN}" \
+            '{
+              artifact_id: $artifact_id,
+              pages_build_version: $build_version,
+              oidc_token: $oidc_token
+            }')"
+
+          response="$(
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${GITHUB_REPOSITORY}/pages/deployments" \
+              --input - <<<"${payload}"
+          )"
+
+          deployment_id="$(printf '%s' "${response}" | jq -r '.id // (.status_url | split("/") | last) // empty')"
+          page_url="$(printf '%s' "${response}" | jq -r '.page_url // empty')"
+
+          if [ -z "${deployment_id}" ]; then
+            echo "Pages deployment response did not contain an id." >&2
+            exit 1
+          fi
+
+          echo "deployment_id=${deployment_id}" >> "${GITHUB_OUTPUT}"
+          echo "page_url=${page_url}" >> "${GITHUB_OUTPUT}"
+
+      - name: Wait for Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+        run: |
+          for attempt in $(seq 1 120); do
+            response="$(gh api -H "Accept: application/vnd.github+json" "repos/${GITHUB_REPOSITORY}/pages/deployments/${DEPLOYMENT_ID}")"
+            status="$(printf '%s' "${response}" | jq -r '.status')"
+
+            case "${status}" in
+              succeed)
+                echo "Pages deployment succeeded."
+                exit 0
+                ;;
+              deployment_failed|deployment_perms_error|deployment_content_failed|deployment_cancelled|deployment_lost)
+                echo "Pages deployment failed with status: ${status}" >&2
+                exit 1
+                ;;
+              unknown_status|not_found|deployment_attempt_error)
+                echo "Pages deployment reported transient status: ${status}"
+                ;;
+              *)
+                echo "Pages deployment status: ${status}"
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          echo "Pages deployment timed out; cancelling deployment ${DEPLOYMENT_ID}." >&2
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${DEPLOYMENT_ID}/cancel" || true
+          exit 1
 
   verify-pages:
     name: Verify published endpoints
