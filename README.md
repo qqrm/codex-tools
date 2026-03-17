@@ -164,24 +164,33 @@ https://qqrm.github.io/codex-tools/
 ```
 
 - `GET /personas.json` — retrieve the catalog, including the `base_uri` pointer to the shared instructions. The deployment does **not** publish `/catalog.json`.
+- `GET /entrypoint.json` — retrieve the machine-readable manifest for the published bundle, including catalogs plus every published Markdown, script, and workflow path.
 - `GET /AGENTS.md` — download the shared baseline instructions referenced by `base_uri`.
+- `GET /ENTRYPOINT.md` — fetch the human-readable agent bootstrap guidance referenced by `entrypoint.json`.
+- `GET /docs/{name}.md` — fetch any published shared guidance document.
 - `GET /personas/{id}.md` — retrieve the complete descriptor for the persona with the given `id`.
 - `GET /scenarios.json` — retrieve the scenario catalog alongside persona metadata.
 - `GET /scenarios/{id}.md` — fetch the scenario Markdown when requested by a catalog entry.
+- `GET /scripts/{name}.sh` — fetch any published bootstrap or validation script.
+- `GET /workflows/{name}.yml` — inspect the workflows shipped with the Pages bundle.
 
-Clients should fetch both the catalog and `AGENTS.md` to ensure they stay in sync with the published baseline guidance, because the catalog intentionally omits the Markdown body in favour of the shared URI.
+Clients should begin with `entrypoint.json`, then fetch `personas.json`, `scenarios.json`, and `AGENTS.md` as needed. This keeps the initial request small while still exposing the full published inventory, including supplemental Markdown files that are intentionally outside the typed scenario catalog.
 
 ### Delivery diagrams
 
 ```mermaid
 flowchart TD
-  Client[Client agent] -->|fetch catalog| Catalog[GET /personas.json\nbase_uri -> AGENTS.md]
-  Client -->|download baseline| Agents[GET /AGENTS.md]
-  Client -->|request persona| Persona[GET /personas/{id}.md]
-  Client -->|request scenario| Scenario[GET /scenarios/{id}.md]
+  Client["Client agent"] -->|"fetch entrypoint"| Entrypoint["GET /entrypoint.json"]
+  Entrypoint -->|"discover catalogs"| Catalog["GET /personas.json<br/>base_uri -> AGENTS.md"]
+  Entrypoint -->|"discover shared docs"| Docs["GET /docs/{name}.md"]
+  Client -->|"download baseline"| Agents["GET /AGENTS.md"]
+  Client -->|"request persona"| Persona["GET /personas/{id}.md"]
+  Client -->|"request scenario"| Scenario["GET /scenarios/{id}.md"]
 
-  subgraph GitHubPages
+  subgraph GitHubPages["GitHub Pages"]
+    Entrypoint
     Catalog
+    Docs
     Agents
     Persona
     Scenario
@@ -190,12 +199,12 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  Dev[Contributor edits personas, scenarios, and docs]
-  Generator[cargo run --release -p personas-core\nupdates personas/catalog.json]
-  Bundle[scripts/build-pages.sh\npackages published assets]
-  Validate[scripts/validate-pages.sh\nensures only supported files ship]
-  Pages[GitHub Pages artifact\nAGENTS.md + personas.json + Markdown]
-  Consumers[External automation]
+  Dev["Contributor edits personas, scenarios, docs, and scripts"]
+  Generator["cargo run --release -p personas-core<br/>updates personas/catalog.json"]
+  Bundle["scripts/build-pages.sh<br/>packages published assets and entrypoint.json"]
+  Validate["scripts/validate-pages.sh<br/>ensures every published source file ships"]
+  Pages["GitHub Pages artifact<br/>entrypoint.json + catalogs + Markdown + scripts"]
+  Consumers["External automation"]
 
   Dev --> Generator --> Bundle --> Validate --> Pages --> Consumers
 ```
@@ -228,6 +237,6 @@ When working locally, reproduce this sequence for any change that touches source
 - `crates/core/src/bin/generate_catalog.rs` — CLI validation of repository layout and catalog generation error handling.
 - `crates/core/src/bin/generate_persona_audit.rs` — persona audit generation, `--check` drift detection, and argument parsing.
 
-The validation script checks that the published artifact keeps the shared documentation and catalog files in sync. It fails if `AGENTS.md`, the docs bundle (`docs/INSTRUCTIONS.md` and `docs/SPECIFICATION.md`), the catalog exports (`personas/catalog.json`, `personas.json`, `index.json`), the codex cleanup workflow (`workflows/codex-cleanup.yml`), or the bootstrap entry points (`scripts/BaseInitialization.sh`, `scripts/FullInitialization.sh`, `scripts/PretaskInitialization.sh`) are missing or empty.
+The validation script checks that the published artifact keeps the shared documentation and catalog files in sync. It fails if any tracked root Markdown file, published doc, persona, scenario, shell script, or workflow expected from the repository source tree is missing or empty in the Pages bundle.
 
 For detailed schemas, examples, and API usage, always defer to `SPECIFICATION.md`.

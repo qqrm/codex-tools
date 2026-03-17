@@ -42,6 +42,28 @@ copy_executable() {
   install -m 0755 "${src}" "${dest}"
 }
 
+emit_json_array() {
+  local item_indent="$1"
+  local closing_indent="$2"
+  shift 2
+  local items=("$@")
+  local first=1
+  printf '['
+  local item
+  for item in "${items[@]}"; do
+    if [[ ${first} -eq 1 ]]; then
+      printf '\n%s"%s"' "${item_indent}" "${item}"
+      first=0
+    else
+      printf ',\n%s"%s"' "${item_indent}" "${item}"
+    fi
+  done
+  if [[ ${first} -eq 0 ]]; then
+    printf '\n%s' "${closing_indent}"
+  fi
+  printf ']'
+}
+
 refresh_personas_catalog() {
   local catalog_target="${REPO_ROOT}/personas/catalog.json"
   if [[ -n "${PERSONAS_CATALOG_SOURCE:-}" ]]; then
@@ -71,97 +93,168 @@ mkdir -p "${OUTPUT_DIR}/scenarios"
 cp -a "${REPO_ROOT}/scenarios/." "${OUTPUT_DIR}/scenarios/"
 
 # Shared markdown artifacts
-copy_file "${REPO_ROOT}/AGENTS.md" "${OUTPUT_DIR}/AGENTS.md"
-copy_file "${REPO_ROOT}/README.md" "${OUTPUT_DIR}/README.md"
+shopt -s nullglob
+root_markdown_paths=()
+for root_markdown in "${REPO_ROOT}"/*.md; do
+  root_markdown_name="$(basename "${root_markdown}")"
+  root_markdown_paths+=("/${root_markdown_name}")
+  copy_file "${root_markdown}" "${OUTPUT_DIR}/${root_markdown_name}"
+done
 
 mkdir -p "${OUTPUT_DIR}/docs"
-copy_file "${REPO_ROOT}/docs/INSTRUCTIONS.md" "${OUTPUT_DIR}/docs/INSTRUCTIONS.md"
-copy_file "${REPO_ROOT}/docs/SPECIFICATION.md" "${OUTPUT_DIR}/docs/SPECIFICATION.md"
+cp -a "${REPO_ROOT}/docs/." "${OUTPUT_DIR}/docs/"
 copy_file "${REPO_ROOT}/docs/AGENT_ENTRYPOINT.md" "${OUTPUT_DIR}/ENTRYPOINT.md"
-copy_file "${REPO_ROOT}/docs/PROMPT_GENERATION.md" "${OUTPUT_DIR}/docs/PROMPT_GENERATION.md"
+
+docs_paths=()
+for doc_path in "${REPO_ROOT}"/docs/*.md; do
+  docs_paths+=("/docs/$(basename "${doc_path}")")
+done
 
 # Pages configuration
 copy_file "${REPO_ROOT}/static.json" "${OUTPUT_DIR}/static.json"
 
-# Bootstrap entry points
+# Published shell scripts
 mkdir -p "${OUTPUT_DIR}/scripts"
-bootstrap_scripts=(
-  BaseInitialization.sh
-  FullInitialization.sh
-  PretaskInitialization.sh
-)
-
-for script in "${bootstrap_scripts[@]}"; do
-  copy_executable "${REPO_ROOT}/scripts/${script}" "${OUTPUT_DIR}/scripts/${script}"
+scripts_paths=()
+for script_path in "${REPO_ROOT}"/scripts/*.sh; do
+  script_name="$(basename "${script_path}")"
+  scripts_paths+=("/scripts/${script_name}")
+  copy_executable "${script_path}" "${OUTPUT_DIR}/scripts/${script_name}"
 done
 
 # Workflows
 mkdir -p "${OUTPUT_DIR}/workflows"
 cp -a "${REPO_ROOT}/.github/workflows/." "${OUTPUT_DIR}/workflows/"
+workflow_paths=()
+for workflow_path in "${REPO_ROOT}"/.github/workflows/*.yml; do
+  workflow_paths+=("/workflows/$(basename "${workflow_path}")")
+done
+
+persona_paths=()
+for persona_path in "${REPO_ROOT}"/personas/*.md; do
+  persona_paths+=("/personas/$(basename "${persona_path}")")
+done
+
+scenario_paths=()
+for scenario_path in "${REPO_ROOT}"/scenarios/*.md; do
+  scenario_paths+=("/scenarios/$(basename "${scenario_path}")")
+done
 
 # Catalog copies
 copy_file "${OUTPUT_DIR}/personas/catalog.json" "${OUTPUT_DIR}/index.json"
-cat > "${OUTPUT_DIR}/entrypoint.json" <<'JSON'
 {
-  "version": 1,
-  "baseline": "/AGENTS.md",
-  "entrypoint": "/ENTRYPOINT.md",
-  "personas_catalog": "/personas.json",
-  "scenarios_catalog": "/scenarios.json",
-  "prompt_generation": "/docs/PROMPT_GENERATION.md",
-  "bootstrap": {
-    "base": "/scripts/BaseInitialization.sh",
-    "full": "/scripts/FullInitialization.sh",
-    "pretask": "/scripts/PretaskInitialization.sh"
-  },
-  "resolution_order": [
-    "repo_local_agents",
-    "repo_current_state",
-    "repo_done_criteria",
-    "shared_baseline",
-    "selected_persona",
-    "selected_scenarios"
-  ],
-  "mcp_policy": {
-    "preferred_order": [
-      "repo_search",
-      "task_memory",
-      "browser",
-      "shared_docs"
-    ]
-  },
-  "final_report": [
-    "what changed",
-    "what was validated",
-    "what remains uncertain"
-  ]
-}
-JSON
+  printf '{\n'
+  printf '  "version": 2,\n'
+  printf '  "base_request": "/entrypoint.json",\n'
+  printf '  "baseline": "/AGENTS.md",\n'
+  printf '  "entrypoint": "/ENTRYPOINT.md",\n'
+  printf '  "readme": "/README.md",\n'
+  printf '  "prompt_generation": "/docs/PROMPT_GENERATION.md",\n'
+  printf '  "catalogs": {\n'
+  printf '    "personas": "/personas.json",\n'
+  printf '    "scenarios": "/scenarios.json",\n'
+  printf '    "legacy_personas_index": "/index.json"\n'
+  printf '  },\n'
+  printf '  "bootstrap": {\n'
+  printf '    "base": "/scripts/BaseInitialization.sh",\n'
+  printf '    "full": "/scripts/FullInitialization.sh",\n'
+  printf '    "pretask": "/scripts/PretaskInitialization.sh"\n'
+  printf '  },\n'
+  printf '  "published": {\n'
+  printf '    "root_markdown": '
+  emit_json_array '      ' '    ' "${root_markdown_paths[@]}"
+  printf ',\n'
+  printf '    "docs": '
+  emit_json_array '      ' '    ' "${docs_paths[@]}"
+  printf ',\n'
+  printf '    "personas": '
+  emit_json_array '      ' '    ' "${persona_paths[@]}"
+  printf ',\n'
+  printf '    "scenarios": '
+  emit_json_array '      ' '    ' "${scenario_paths[@]}"
+  printf ',\n'
+  printf '    "scripts": '
+  emit_json_array '      ' '    ' "${scripts_paths[@]}"
+  printf ',\n'
+  printf '    "workflows": '
+  emit_json_array '      ' '    ' "${workflow_paths[@]}"
+  printf '\n'
+  printf '  },\n'
+  printf '  "resolution_order": [\n'
+  printf '    "repo_local_agents",\n'
+  printf '    "repo_current_state",\n'
+  printf '    "repo_done_criteria",\n'
+  printf '    "shared_baseline",\n'
+  printf '    "selected_persona",\n'
+  printf '    "selected_scenarios"\n'
+  printf '  ],\n'
+  printf '  "mcp_policy": {\n'
+  printf '    "preferred_order": [\n'
+  printf '      "repo_search",\n'
+  printf '      "task_memory",\n'
+  printf '      "browser",\n'
+  printf '      "shared_docs"\n'
+  printf '    ]\n'
+  printf '  },\n'
+  printf '  "final_report": [\n'
+  printf '    "what changed",\n'
+  printf '    "what was validated",\n'
+  printf '    "what remains uncertain"\n'
+  printf '  ]\n'
+  printf '}\n'
+} > "${OUTPUT_DIR}/entrypoint.json"
 copy_file "${OUTPUT_DIR}/personas/catalog.json" "${OUTPUT_DIR}/personas.json"
 copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios/index.json"
 copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
 
 # Landing page markdown
 {
-  cat "${REPO_ROOT}/AGENTS.md"
+  echo "# Codex Tools"
+  echo
+  echo "Published bundle: https://qqrm.github.io/codex-tools/"
+  echo
+  echo "## Base discovery"
+  echo "- [entrypoint.json](entrypoint.json)"
+  echo "- [ENTRYPOINT](ENTRYPOINT.md)"
+  echo "- [AGENTS](AGENTS.md)"
+  echo
+  echo "## Root Markdown"
+  for root_path in "${root_markdown_paths[@]}"; do
+    root_name="${root_path#/}"
+    echo "- [${root_name}](${root_name})"
+  done
+  echo
+  echo "## Shared Docs"
+  for doc_path in "${docs_paths[@]}"; do
+    doc_name="${doc_path#/docs/}"
+    echo "- [${doc_name}](docs/${doc_name})"
+  done
   echo
   echo "## Personas"
+  echo "- [catalog](personas.json)"
   for persona_path in "${REPO_ROOT}"/personas/*.md; do
     persona_name="$(basename "${persona_path}")"
     echo "- [${persona_name%.*}](personas/${persona_name})"
   done
   echo
-  echo "## Agent Entrypoint"
-  echo "- [ENTRYPOINT](ENTRYPOINT.md)"
-  echo "- [prompt generation](docs/PROMPT_GENERATION.md)"
-  echo
   echo "## Scenarios"
+  echo "- [catalog](scenarios.json)"
   for scenario_path in "${REPO_ROOT}"/scenarios/*.md; do
     scenario_name="$(basename "${scenario_path}")"
     echo "- [${scenario_name%.*}](scenarios/${scenario_name})"
   done
   echo
-  cat "${REPO_ROOT}/docs/INSTRUCTIONS.md"
+  echo "## Scripts"
+  for script_path in "${REPO_ROOT}"/scripts/*.sh; do
+    script_name="$(basename "${script_path}")"
+    echo "- [${script_name}](scripts/${script_name})"
+  done
+  echo
+  echo "## Workflows"
+  for workflow_path in "${REPO_ROOT}"/.github/workflows/*.yml; do
+    workflow_name="$(basename "${workflow_path}")"
+    echo "- [${workflow_name}](workflows/${workflow_name})"
+  done
 } > "${OUTPUT_DIR}/index.md"
 
 # Disable Jekyll processing

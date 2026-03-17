@@ -14,16 +14,22 @@ and supporting documentation without scanning unrelated content.
 ```
 /
   AGENTS.md
+  README.md
+  REPO_AGENTS.md
   docs/
+    AGENT_ENTRYPOINT.md
     INSTRUCTIONS.md
+    PROMPT_GENERATION.md
     SPECIFICATION.md
   personas/
   scenarios/
 ```
 
 - `AGENTS.md` lives at the repository root and defines the shared baseline instructions referenced by the catalog `base_uri`.
-- `docs/` contains public documentation. At minimum it must include this specification and `INSTRUCTIONS.md`, which summarizes
-  the published HTTP endpoints.
+- `README.md` provides the human-oriented overview of the published bundle and mirrors the served documentation.
+- `REPO_AGENTS.md` captures repository-specific guidance that downstream automation may need to inspect explicitly.
+- `docs/` contains public documentation. At minimum it must include this specification, `INSTRUCTIONS.md`, `AGENT_ENTRYPOINT.md`,
+  and `PROMPT_GENERATION.md`.
 - `/personas/` stores every persona Markdown file described in Section 3.
 - `/scenarios/` stores reusable task playbooks described in Section 4.
 
@@ -224,24 +230,41 @@ Scenarios are indexed in `scenarios/catalog.json`, which mirrors the persona cat
 }
 ```
 
-### 5.3 Delivery model
+### 5.3 Discovery manifest
 
-Clients begin by fetching `personas.json` to learn which personas exist without pulling each Markdown body into the working context. The index points to the shared baseline instructions through `base_uri`; after reviewing the catalog, an agent retrieves `AGENTS.md` and then issues targeted requests for only the personas it needs. When a user explicitly asks for a named scenario, the agent follows the same flow with `scenarios.json` and the matching Markdown under `/scenarios/`. This two-step pattern keeps the initial context footprint small while still providing a consistent entry point for automation. Requests to `/catalog.json` should be treated as configuration errors.
+GitHub Pages also publishes `entrypoint.json`, a machine-readable manifest that lists:
+
+- the baseline documents (`AGENTS.md`, `ENTRYPOINT.md`, prompt-generation guide);
+- the typed catalogs (`personas.json`, `scenarios.json`);
+- every published root Markdown file, shared doc, persona file, scenario file, shell script, and workflow path.
+
+This allows agents to start with a single lightweight request, then fetch only the files they need.
+
+### 5.4 Delivery model
+
+Clients should begin by fetching `entrypoint.json` to discover the current published inventory. From there, they can fetch `personas.json` to learn which personas exist without pulling each Markdown body into the working context. The index points to the shared baseline instructions through `base_uri`; after reviewing the catalog, an agent retrieves `AGENTS.md` and then issues targeted requests for only the personas it needs. When a user explicitly asks for a named scenario, the agent follows the same flow with `scenarios.json` and the matching Markdown under `/scenarios/`. This keeps the initial context footprint small while still providing a consistent entry point for automation. Requests to `/catalog.json` should be treated as configuration errors.
 
 ## 6. API Endpoints
 
 GitHub Pages exposes the repository at `https://qqrm.github.io/codex-tools/`. Clients rely on the following endpoints:
 
+- **Base discovery manifest:** `GET /entrypoint.json`.
 - **Catalog and base instructions:** `GET /personas.json`.
 - **Incorrect legacy path:** `GET /catalog.json` returns `404 Not Found` and indicates a misconfigured client.
 - **Baseline instructions only:** `GET /AGENTS.md`.
+- **Human-readable bootstrap guidance:** `GET /ENTRYPOINT.md`.
+- **Published shared docs:** `GET /docs/{name}.md`.
 - **Full persona:** `GET /personas/{id}.md`.
+- **Scenario catalog:** `GET /scenarios.json`.
+- **Full scenario or supplemental guide:** `GET /scenarios/{id}.md`.
+- **Published shell scripts:** `GET /scripts/{name}.sh`.
+- **Published workflows:** `GET /workflows/{name}.yml`.
 
 ## 7. Extensibility and Tooling
 
 - Add new personas by committing additional Markdown files under `/personas/` with the required front matter.
 - Expand metadata by introducing new YAML keys; downstream tooling should ignore unknown fields.
-- The Rust workspace under `crates/` regenerates `personas/catalog.json` via `cargo run --release`; the GitHub Pages deployment publishes the result as `personas.json`.
+- The Rust workspace under `crates/` regenerates `personas/catalog.json` via `cargo run --release`; the GitHub Pages deployment publishes the result as `personas.json` and packages the broader discovery manifest as `entrypoint.json`.
 
 ## 8. Relationship to README
 

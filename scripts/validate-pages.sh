@@ -25,8 +25,6 @@ check_path() {
 
 # Files and JSON artifacts that must remain present and non-empty
 required_paths=(
-  AGENTS.md
-  README.md
   static.json
   index.md
   index.json
@@ -37,15 +35,32 @@ required_paths=(
   scenarios/catalog.json
   scenarios/index.json
   scenarios.json
-  docs/INSTRUCTIONS.md
-  docs/SPECIFICATION.md
-  docs/PROMPT_GENERATION.md
-  scripts/BaseInitialization.sh
-  scripts/FullInitialization.sh
-  scripts/PretaskInitialization.sh
-  workflows/ci.yml
-  workflows/pages.yml
 )
+
+shopt -s nullglob
+for root_markdown in "${REPO_ROOT}"/*.md; do
+  required_paths+=("$(basename "${root_markdown}")")
+done
+
+for doc_path in "${REPO_ROOT}"/docs/*.md; do
+  required_paths+=("docs/$(basename "${doc_path}")")
+done
+
+for persona_path in "${REPO_ROOT}"/personas/*.md; do
+  required_paths+=("personas/$(basename "${persona_path}")")
+done
+
+for scenario_path in "${REPO_ROOT}"/scenarios/*.md; do
+  required_paths+=("scenarios/$(basename "${scenario_path}")")
+done
+
+for script_path in "${REPO_ROOT}"/scripts/*.sh; do
+  required_paths+=("scripts/$(basename "${script_path}")")
+done
+
+for workflow_path in "${REPO_ROOT}"/.github/workflows/*.yml; do
+  required_paths+=("workflows/$(basename "${workflow_path}")")
+done
 
 for relative_path in "${required_paths[@]}"; do
   check_path "${relative_path}"
