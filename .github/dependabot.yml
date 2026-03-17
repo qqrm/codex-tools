@@ -1,5 +1,27 @@
 version: 2
 updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "11:30"
+      timezone: "Europe/Moscow"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "11:45"
+      timezone: "Europe/Moscow"
+    groups:
+      rust-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "rust-toolchain"
     directory: "/"
     schedule:
