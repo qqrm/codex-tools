@@ -163,6 +163,8 @@ jobs:
             response="$(gh api -H "Accept: application/vnd.github+json" "repos/${GITHUB_REPOSITORY}/pages/deployments/${DEPLOYMENT_ID}")"
             status="$(printf '%s' "${response}" | jq -r '.status')"
 
+            echo "Polling Pages deployment (attempt ${attempt}/120): ${status}"
+
             case "${status}" in
               succeed)
                 echo "Pages deployment succeeded."
