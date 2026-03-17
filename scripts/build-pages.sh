@@ -77,6 +77,8 @@ copy_file "${REPO_ROOT}/README.md" "${OUTPUT_DIR}/README.md"
 mkdir -p "${OUTPUT_DIR}/docs"
 copy_file "${REPO_ROOT}/docs/INSTRUCTIONS.md" "${OUTPUT_DIR}/docs/INSTRUCTIONS.md"
 copy_file "${REPO_ROOT}/docs/SPECIFICATION.md" "${OUTPUT_DIR}/docs/SPECIFICATION.md"
+copy_file "${REPO_ROOT}/docs/AGENT_ENTRYPOINT.md" "${OUTPUT_DIR}/ENTRYPOINT.md"
+copy_file "${REPO_ROOT}/docs/PROMPT_GENERATION.md" "${OUTPUT_DIR}/docs/PROMPT_GENERATION.md"
 
 # Pages configuration
 copy_file "${REPO_ROOT}/static.json" "${OUTPUT_DIR}/static.json"
@@ -95,10 +97,46 @@ done
 
 # Workflows
 mkdir -p "${OUTPUT_DIR}/workflows"
-copy_file "${REPO_ROOT}/.github/workflows/codex-cleanup.yml" "${OUTPUT_DIR}/workflows/codex-cleanup.yml"
+cp -a "${REPO_ROOT}/.github/workflows/." "${OUTPUT_DIR}/workflows/"
 
 # Catalog copies
 copy_file "${OUTPUT_DIR}/personas/catalog.json" "${OUTPUT_DIR}/index.json"
+cat > "${OUTPUT_DIR}/entrypoint.json" <<'JSON'
+{
+  "version": 1,
+  "baseline": "/AGENTS.md",
+  "entrypoint": "/ENTRYPOINT.md",
+  "personas_catalog": "/personas.json",
+  "scenarios_catalog": "/scenarios.json",
+  "prompt_generation": "/docs/PROMPT_GENERATION.md",
+  "bootstrap": {
+    "base": "/scripts/BaseInitialization.sh",
+    "full": "/scripts/FullInitialization.sh",
+    "pretask": "/scripts/PretaskInitialization.sh"
+  },
+  "resolution_order": [
+    "repo_local_agents",
+    "repo_current_state",
+    "repo_done_criteria",
+    "shared_baseline",
+    "selected_persona",
+    "selected_scenarios"
+  ],
+  "mcp_policy": {
+    "preferred_order": [
+      "repo_search",
+      "task_memory",
+      "browser",
+      "shared_docs"
+    ]
+  },
+  "final_report": [
+    "what changed",
+    "what was validated",
+    "what remains uncertain"
+  ]
+}
+JSON
 copy_file "${OUTPUT_DIR}/personas/catalog.json" "${OUTPUT_DIR}/personas.json"
 copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios/index.json"
 copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
@@ -112,6 +150,10 @@ copy_file "${OUTPUT_DIR}/scenarios/catalog.json" "${OUTPUT_DIR}/scenarios.json"
     persona_name="$(basename "${persona_path}")"
     echo "- [${persona_name%.*}](personas/${persona_name})"
   done
+  echo
+  echo "## Agent Entrypoint"
+  echo "- [ENTRYPOINT](ENTRYPOINT.md)"
+  echo "- [prompt generation](docs/PROMPT_GENERATION.md)"
   echo
   echo "## Scenarios"
   for scenario_path in "${REPO_ROOT}"/scenarios/*.md; do

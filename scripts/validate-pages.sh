@@ -30,6 +30,8 @@ required_paths=(
   static.json
   index.md
   index.json
+  entrypoint.json
+  ENTRYPOINT.md
   personas/catalog.json
   personas.json
   scenarios/catalog.json
@@ -37,10 +39,12 @@ required_paths=(
   scenarios.json
   docs/INSTRUCTIONS.md
   docs/SPECIFICATION.md
+  docs/PROMPT_GENERATION.md
   scripts/BaseInitialization.sh
   scripts/FullInitialization.sh
   scripts/PretaskInitialization.sh
-  workflows/codex-cleanup.yml
+  workflows/ci.yml
+  workflows/pages.yml
 )
 
 for relative_path in "${required_paths[@]}"; do

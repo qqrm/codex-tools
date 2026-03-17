@@ -1,5 +1,13 @@
 # Codex Tools
 
+
+## Shared Guidance
+
+Key shared guidance lives in:
+- `AGENTS.md` for the always-on baseline
+- `docs/AGENT_ENTRYPOINT.md` for agent bootstrapping and tool selection
+- `docs/PROMPT_GENERATION.md` for context-efficient planner-to-executor prompt generation
+
 This repository hosts behavioral **personas** for Codex agents. Personas are Markdown prompts with YAML front matter that describe specialized roles. The collection is published read-only through GitHub Pages for direct consumption by automation and other integrations.
 
 ## Persona Usage Guidelines

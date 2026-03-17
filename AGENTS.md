@@ -1,106 +1,25 @@
 # Base Agent Instructions
 
-These guidelines apply to every persona in this repository.
+Work proactively: gather enough context, make reasonable low-risk assumptions, and complete coherent tasks end-to-end when feasible.
 
-## Critical Checklist
-- Confirm the repository is ready by checking `git remote -v` and `gh auth status`; Codex automatically provisions the workspace.
-- Switch off the bootstrap `work` branch immediately, create a descriptive English feature branch, and never create or push a branch named `WORK`.
-- Treat every assignment as production work: plan the solution, implement it to a high standard, and keep the working tree clean.
-- Retrieve the persona catalog from GitHub Pages (`https://qqrm.github.io/codex-tools/personas.json`); the deployment does **not** publish `/catalog.json`, so avoid requesting that path. Pick a non-default persona that fits the task and explain the choice in the final user summary and maintainer notes.
-- Run the required validation suite (`cargo fmt`, `cargo check`, `cargo clippy`, `cargo test`, `cargo machete`, etc.) before committing and again before wrapping up. Do not finish until local and remote checks are green, or you have escalated a blocker with evidence. The default Rust command loop is:
-  ```bash
-  cargo fmt --all -- --check
-  cargo check --tests --benches
-  cargo clippy --all-targets --all-features -- -D warnings
-  cargo build --release
-  cargo test
-  cargo machete            # if installed
-  ```
+Core rules:
+- Prefer root-cause fixes over hacks and symptom suppression.
+- Keep scope tight. Do not mix unrelated changes.
+- Use existing repository conventions, scripts, and patterns first.
+- Validate the touched surface before finishing.
+- Do not invent facts, repo state, test results, or completion status.
+- State blockers, risks, assumptions, and unknowns explicitly.
 
-## Engineering Mindset
-- Operate like a senior engineer: analyse the problem space, decide on a plan, execute decisively, and justify trade-offs.
-- Ruthlessly minimise bespoke code. Solve problems with the smallest viable implementation, remove redundancy, and refuse complexity that is not directly tied to the goal.
-- Prefer mature, well-supported external crates over hand-rolled functionality when they reduce code volume or maintenance overhead. Document any crate selection so reviewers understand the dependency trade-offs.
-- Before adopting any external crate, build and read its documentation with `cargo doc --no-deps --open`; if the generated docs are insufficient, inspect the crate sources directly to close the knowledge gap.
-- Validate assumptions with evidence—inspect the workspace, run discovery commands, and confirm tool availability instead of guessing.
-- Surface conflicting instructions, choose the most production-ready resolution, and document the reasoning.
-- Escalate blockers quickly with actionable detail rather than waiting for new guidance.
+Escalation:
+- Resolve local, low-risk ambiguity yourself.
+- Escalate ambiguity that affects semantics, architecture, or external behavior.
 
-## Planning and Strategy
-- Review every applicable `AGENTS.md` file before modifying code.
-- Consult repository documentation such as `ARCHITECTURE.md`, `SPECIFICATION.md`, or READMEs whenever they exist.
-- Draft a concise plan for multi-step work, update it as facts change, and communicate deviations with rationale.
-- During planning, audit existing crates and internal components before writing new code; prefer reuse when it meaningfully shrinks the solution.
-- When a task requires an audit, output the findings as task stubs that describe the follow-up work instead of committing Markdown reports.
-- Confirm that each user request belongs to this repository; request clarification when scope is uncertain.
-- Stay inquisitive—close knowledge gaps by asking focused follow-up questions or running targeted experiments.
+Environment:
+- If a required local tool is missing, first look for an existing setup script or documented bootstrap path.
+- If the missing tool can be installed safely and reproducibly in the current environment, install it and continue.
+- If installation is risky, unclear, or blocked by missing permissions/network, report the blocker with evidence.
 
-## Tooling and Environment
-- Assume the local toolchain is ready for real-world development: `git`, `gh`, language toolchains, formatters, linters, and test runners.
-- Prefer command-line tooling and automate repetitive steps to keep workflows reproducible.
-- Confirm `gh auth status`, `git remote -v`, and other environment checks early in each task so you understand what is available.
-- When a required tool is unavailable, record the failure, suggest remediation, and continue with alternative plans when feasible.
-- Keep a shared CLI toolbelt installed when possible: `cargo-make`, `cargo-watch`, `cargo-edit`, `cargo-nextest`, `cargo-audit`, `proptest`, `cargo-fuzz`, `cargo-tarpaulin`, `mdBook`, `typst`, `zola`, `svgbob`, `gitui`, `delta`, `helix`, `zellij`, `fd`, `bat`, and `ripgrep` support the validation and documentation workflows described in this repository.
-
-## Development Workflow
-- Treat user requests as complete tasks and deliver production-ready branches that maintainers can promote without extra fixes.
-- In local environments, isolate each task in a dedicated `git worktree`. Name each worktree and branch with a task-specific slug, create a new worktree per task, do not share one worktree across concurrent tasks, and avoid direct task work on the primary checkout.
-- Run every required check before committing. Default to the full test suite for the components you touched and document any skipped command with justification.
-- Surface any blockers preventing a clean branch handoff (failed checks, diverged history, etc.) together with remediation steps.
-- Remove dead code rather than suppressing warnings; feature-gate unused code when necessary.
-- Write tests for new functionality and resolve reported problems.
-
-## Personas
-- Use the published site at `https://qqrm.github.io/codex-tools/` to fetch personas and base instructions.
-- Treat every persona as a Markdown document that must be fully read to extract its textual guidance; personas are not images. Document that you consumed the Markdown content and cite the relevant text when explaining your choice.
-- When a user explicitly requests a named scenario (e.g., architecture audit, dependency refresh), fetch it from `https://qqrm.github.io/codex-tools/scenarios.json` and load the referenced `/scenarios/{id}.md` prompt alongside the selected persona.
-- Always read and interpret the Markdown body before selecting a persona. Summaries, descriptions, and justifications must quote or paraphrase the retrieved text rather than assumptions or prior experience.
-- Use the REST API to inspect the latest persona catalog (`/personas.json`) and README information as needed. Record HTTP errors (excluding the expected `/catalog.json` 404, which indicates a wrong path) and retry transient failures up to five times before escalating.
-- Whenever persona retrieval or file parsing fails, explicitly state the problem (HTTP status, missing file, parse error, etc.) in both the user summary and maintainer notes, including the number of attempts and which step failed (catalog fetch, Markdown download, parsing).
-- Select a non-default persona that matches the task context, document why it fits based on the Markdown content you retrieved, and include this rationale—grounded in the persona text—in the final response to the user and in maintainer notes when requested.
-- Provide the full HTTPS URL for every persona you used in both the final user summary and any maintainer notes, together with a brief description lifted from or paraphrased directly out of the Markdown text. If the Markdown cannot be read, report the failure and its cause instead of inventing details.
-- When operating offline or when automated downloads are impossible, record every failed attempt (command, timestamp, error), explain the outage, and clearly describe the fallback process. Only use cached knowledge to choose the closest persona, and explicitly state that the Markdown content could not be retrieved.
-- Switch personas as needed for sub-tasks (e.g., Senior, Architect, Tester, Analyst) and list every persona used when summarising work.
-
-## Testing and Validation
-- Install tooling as needed (`rustup component add clippy rustfmt`).
-- Ensure every Rust crate in this repository targets the Rust 2024 edition; verify that each `Cargo.toml`, `rust-toolchain.toml`, and generated manifest declares `edition = "2024"`, and update toolchain settings immediately when discrepancies arise.
-- Track upstream crate releases proactively: prefer the latest stable versions and confirm expectations against their crates.io documentation before locking or updating dependencies.
-- When Rust source code or GitHub workflow files change, reproduce the full CI pipeline locally before committing, covering formatters, linters, tests, documentation builders, and any repository-specific scripts.
-- Documentation-only changes (Markdown, guides, `AGENTS.md` updates, etc.) may follow the lightweight validation steps defined by the repository-specific instructions. Record any skipped tooling in the final report.
-- Treat every failure or warning from the required tooling—including findings such as unused dependencies reported by `cargo machete`—as part of the active task and resolve them before finishing, even when the issue originates outside the immediate scope of the requested change.
-- Readiness requires zero formatting issues, linter warnings, or failing tests.
-- Treat any failed pipeline, automated check, or test (local or remote) as a blocker—capture the logs, diagnose the root cause, and implement fixes until the suite passes before declaring the task complete.
-
-## GitHub and CI Practices
-- Treat GitHub workflows as first-class code: keep them under version control, review every change, and follow `.github/AGENTS.md` for directory-specific rules.
-- Pipeline secrets reside in the `prod` environment.
-- Use the GitHub interface to inspect logs from the five most recent pipeline runs.
-- Prefer the [`dtolnay/rust-toolchain`](https://github.com/dtolnay/rust-toolchain) pipelines for Rust projects—they are our required standard.
-- Gate documentation and GitHub Pages workflows on the same Rust validation sequence used in CI: `cargo fmt --all -- --check`, `cargo check --tests --benches`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test` must all pass before packaging or publishing artifacts.
-- After completing a task, verify that the current branch's HEAD matches `origin/main`; if `origin/main` has advanced, restart the task from the latest commit.
-
-## Instruction Management
-- This root `AGENTS.md` is fetched from the GitHub Pages deployment during container initialization. Update it only when you intentionally change the global rules.
-- Repository-specific instructions may appear in `REPO_AGENTS.md`. If this file is absent, assume no extra instructions. When `REPO_AGENTS.md` and this file conflict, the rules in `REPO_AGENTS.md` take precedence.
-- Additional `AGENTS.md` files may appear in subdirectories; follow their instructions within their scope.
-- When the active repository is named anything other than `codex-tools`, treat every `AGENTS.md` file as read-only—do not modify, extend, or replace it under any circumstance.
-- Keep `AGENTS.md` entries in English.
-
-## Communication
-- Replies to users must be concise and in **Russian**.
-- Source code, comments, documentation, branch names, and commit messages must be in **English**.
-- If a task description is in Russian, translate branch and task names into English.
-- Describe the environment as a production workspace; never call it a training or sandbox setting.
-- Provide maintainers with concise notes: list changes, reference lines with `F:path#Lx-Ly`, and attach test results.
-- In the final summary, list all personas used and report the status of every mandatory check you reproduced locally; it is acceptable to skip tests for documentation-only pull requests when you explicitly note the exemption.
-- Never commit conversational responses or ad-hoc Markdown summaries into the repository unless the task explicitly requires a
-  checked-in document.
-
-## Documentation
-- Markdown uses `#` for headers and specifies languages for code blocks.
-- Markdown filenames must be ALL_CAPS with underscores between words.
-- Comments and documentation are always in English.
-
-### Optional Reasoning Style
-- Teams may keep personal reasoning templates as optional references; they are not mandated by this guide.
+Final report:
+- what changed
+- what was validated
+- what remains uncertain
