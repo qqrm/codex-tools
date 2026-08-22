@@ -15,6 +15,7 @@ concurrency:
 jobs:
   digest:
     name: Report open CVEs and orphaned workflows to Telegram
+    environment: security-digest
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
